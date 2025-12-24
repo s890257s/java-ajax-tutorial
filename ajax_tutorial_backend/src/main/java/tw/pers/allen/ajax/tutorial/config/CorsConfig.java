@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax_tutorial_backend.config;
+package tw.pers.allen.ajax.tutorial.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

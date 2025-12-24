@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <title>CH1-1: MVC vs AJAX Comparison</title>
+    <style>
+      body {
+        font-family: "Microsoft JhengHei", sans-serif;
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+      .header-section {
+        text-align: center;
+        margin-bottom: 20px;
+        background-color: #f8f9fa;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+      }
+      #counter-box {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #d32f2f;
+        margin: 10px 0;
+      }
+      .container {
+        display: flex;
+        gap: 30px;
+      }
+      .panel {
+        flex: 1;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      .panel-mvc {
+        background-color: #fff0f0;
+      }
+      .panel-ajax {
+        background-color: #e0f2f1;
+      }
+      h2 {
+        text-align: center;
+        margin-top: 0;
+        border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+        padding-bottom: 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: center;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      .qty-control {
+        display: flex;
+        justify-content: center;
+        gap: 5px;
+        align-items: center;
+      }
+      button {
+        padding: 5px 10px;
+        cursor: pointer;
+      }
+      /* Comparison Highlight */
+      .highlight-reload {
+        color: #d32f2f;
+        font-weight: bold;
+      }
+      .highlight-ajax {
+        color: #00796b;
+        font-weight: bold;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-section">
+      <h1>MVC vs AJAX 對比演示</h1>
+      <div>全域瀏覽時間計數器 (驗證頁面是否刷新)</div>
+      <div id="counter-box"><span id="counter">0</span></div>
+      <p>
+        <strong>左側</strong>操作會導致計數器重置（頁面刷新） |
+        <strong>右側</strong>操作計數器持續增加（局部更新）
+      </p>
+    </div>
+
+    <div class="container">
+      <!-- Left Panel: Traditional MVC -->
+      <div class="panel panel-mvc">
+        <h2>
+          傳統 MVC
+          <span style="font-size: 0.6em">(Form Submit + Redirect)</span>
+        </h2>
+        <table>
+          <thead>
+            <tr>
+              <th>商品名稱</th>
+              <th>數量</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="item : ${cartItems}">
+              <td th:text="${item.name}">Product</td>
+              <td th:text="${item.quantity}">1</td>
+              <td>
+                <div class="qty-control">
+                  <form action="/cart/update" method="post" style="margin: 0">
+                    <input
+                      type="hidden"
+                      name="productId"
+                      th:value="${item.id}"
+                    />
+                    <input
+                      type="hidden"
+                      name="newQty"
+                      th:value="${item.quantity - 1}"
+                    />
+                    <button type="submit" th:disabled="${item.quantity <= 1}">
+                      -
+                    </button>
+                  </form>
+                  <form action="/cart/update" method="post" style="margin: 0">
+                    <input
+                      type="hidden"
+                      name="productId"
+                      th:value="${item.id}"
+                    />
+                    <input
+                      type="hidden"
+                      name="newQty"
+                      th:value="${item.quantity + 1}"
+                    />
+                    <button type="submit">+</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right Panel: AJAX -->
+      <div class="panel panel-ajax">
+        <h2>AJAX <span style="font-size: 0.6em">(Fetch API)</span></h2>
+        <table>
+          <thead>
+            <tr>
+              <th>商品名稱</th>
+              <th>數量</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr th:each="item : ${cartItems}">
+              <td th:text="${item.name}">Product</td>
+              <td>
+                <span
+                  class="ajax-qty"
+                  th:id="'qty-' + ${item.id}"
+                  th:text="${item.quantity}"
+                  >1</span
+                >
+              </td>
+              <td>
+                <div class="qty-control">
+                  <button
+                    class="btn-ajax-minus"
+                    th:attr="data-id=${item.id}, data-qty=${item.quantity}"
+                    th:disabled="${item.quantity <= 1}"
+                  >
+                    -
+                  </button>
+                  <button
+                    class="btn-ajax-plus"
+                    th:attr="data-id=${item.id}, data-qty=${item.quantity}"
+                  >
+                    +
+                  </button>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      // 1. Counter Logic
+      let count = 0;
+      const counterEl = document.getElementById("counter");
+      setInterval(() => {
+        count++;
+        counterEl.innerText = count;
+      }, 100);
+
+      // 2. AJAX Logic
+      const updateCart = async (productId, newQty, btn) => {
+        try {
+          const response = await fetch("/cart/api/update", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: `productId=${productId}&newQty=${newQty}`,
+          });
+
+          if (response.ok) {
+            const updatedItem = await response.json();
+
+            // Only update the AJAX side of the UI
+            const qtySpan = document.getElementById(`qty-${updatedItem.id}`);
+            if (qtySpan) qtySpan.innerText = updatedItem.quantity;
+
+            // Update data attributes for +/- buttons
+            const minusBtn = document.querySelector(
+              `.btn-ajax-minus[data-id='${updatedItem.id}']`
+            );
+            const plusBtn = document.querySelector(
+              `.btn-ajax-plus[data-id='${updatedItem.id}']`
+            );
+
+            if (minusBtn) {
+              minusBtn.setAttribute("data-qty", updatedItem.quantity);
+              minusBtn.disabled = updatedItem.quantity <= 1;
+            }
+            if (plusBtn) {
+              plusBtn.setAttribute("data-qty", updatedItem.quantity);
+            }
+          } else {
+            alert("Update failed!");
+          }
+        } catch (error) {
+          console.error("Error:", error);
+        }
+      };
+
+      document.querySelectorAll(".btn-ajax-plus").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const qty = parseInt(btn.getAttribute("data-qty"));
+          updateCart(id, qty + 1, btn);
+        });
+      });
+
+      document.querySelectorAll(".btn-ajax-minus").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-id");
+          const qty = parseInt(btn.getAttribute("data-qty"));
+          if (qty > 1) updateCart(id, qty - 1, btn);
+        });
+      });
+    </script>
+  </body>
+</html>

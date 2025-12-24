@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax_tutorial_backend.ch1.model;
+package tw.pers.allen.ajax.tutorial.ch1.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
