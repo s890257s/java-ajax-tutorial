@@ -1,11 +1,12 @@
-package tw.pers.allen.ajax.tutorial.ch1.service;
+package tw.com.eeit.ajax.ch1.ch1_1.service;
 
 import jakarta.annotation.PostConstruct;
+import tw.com.eeit.ajax.ch1.ch1_1.model.CartItem;
+import tw.com.eeit.ajax.ch1.ch1_1.repository.CartItemRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tw.pers.allen.ajax.tutorial.ch1.model.CartItem;
-import tw.pers.allen.ajax.tutorial.ch1.repo.CartItemRepository;
 
 import java.util.List;
 
@@ -38,6 +39,11 @@ public class CartService {
 
     @Transactional
     public void updateQuantity(Long productId, Integer newQty) {
+
+        if (productId == null) {
+            throw new IllegalArgumentException("Product ID 不可為空");
+        }
+
         cartItemRepository.findById(productId).ifPresent(item -> {
             item.setQuantity(newQty);
             cartItemRepository.save(item);

@@ -8,7 +8,7 @@
       "type": "java",
       "name": "AjaxTutorialBackendApplication",
       "request": "launch",
-      "mainClass": "tw.pers.allen.ajax.tutorial.AjaxTutorialBackendApplication",
+      "mainClass": "tw.com.eeit.ajax.AjaxTutorialBackendApplication",
       "projectName": "ajax_tutorial_backend"
     }
   ]

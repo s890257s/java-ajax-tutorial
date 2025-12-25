@@ -95,10 +95,10 @@
     </div>
 
     <div class="container">
-      <!-- Left Panel: Traditional MVC -->
+      <!-- 左側: 傳統 MVC(同步) -->
       <div class="panel panel-mvc">
         <h2>
-          傳統 MVC
+          傳統 MVC(同步)
           <span style="font-size: 0.6em">(Form Submit + Redirect)</span>
         </h2>
         <table>
@@ -115,7 +115,7 @@
               <td th:text="${item.quantity}">1</td>
               <td>
                 <div class="qty-control">
-                  <form action="/cart/update" method="post" style="margin: 0">
+                  <form action="/ch1_1/cart/update" method="post" style="margin: 0">
                     <input
                       type="hidden"
                       name="productId"
@@ -130,7 +130,7 @@
                       -
                     </button>
                   </form>
-                  <form action="/cart/update" method="post" style="margin: 0">
+                  <form action="/ch1_1/cart/update" method="post" style="margin: 0">
                     <input
                       type="hidden"
                       name="productId"
@@ -150,9 +150,9 @@
         </table>
       </div>
 
-      <!-- Right Panel: AJAX -->
+      <!-- 右側: AJAX(非同步) -->
       <div class="panel panel-ajax">
-        <h2>AJAX <span style="font-size: 0.6em">(Fetch API)</span></h2>
+        <h2>AJAX(非同步) <span style="font-size: 0.6em">(Fetch API)</span></h2>
         <table>
           <thead>
             <tr>
@@ -207,7 +207,7 @@
       // 2. AJAX Logic
       const updateCart = async (productId, newQty, btn) => {
         try {
-          const response = await fetch("/cart/api/update", {
+          const response = await fetch("/ch1_1/cart/api/update", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
             body: `productId=${productId}&newQty=${newQty}`,

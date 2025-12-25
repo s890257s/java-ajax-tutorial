@@ -9,7 +9,7 @@
 		<version>3.2.5</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>tw.pers.allen</groupId>
+	<groupId>tw.com.eeit.ajax</groupId>
 	<artifactId>ajax_tutorial_backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>ajax_tutorial_backend</name>

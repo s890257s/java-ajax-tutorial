@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax.tutorial.ch1.controller;
+package tw.com.eeit.ajax.ch1.ch1_1.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -9,14 +9,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import tw.pers.allen.ajax.tutorial.ch1.model.CartItem;
-import tw.pers.allen.ajax.tutorial.ch1.service.CartService;
+import tw.com.eeit.ajax.ch1.ch1_1.model.CartItem;
+import tw.com.eeit.ajax.ch1.ch1_1.service.CartService;
 
 import java.util.List;
 
 @Controller
-@RequestMapping("/ch1")
-public class CartController {
+@RequestMapping("/ch1_1")
+public class Ch1_1_CartController {
 
     @Autowired
     private CartService cartService;
@@ -28,16 +28,10 @@ public class CartController {
         return "ch1_1/cart_comparison.html";
     }
 
-    @GetMapping("/test")
-    @ResponseBody
-    public String test() {
-        return "test";
-    }
-
     @PostMapping("/cart/update")
     public String updateQuantity(@RequestParam Long productId, @RequestParam Integer newQty, Model model) {
         cartService.updateQuantity(productId, newQty);
-        return "redirect:/cart/page";
+        return "redirect:/ch1_1/cart/page";
     }
 
     @PostMapping("/cart/api/update")

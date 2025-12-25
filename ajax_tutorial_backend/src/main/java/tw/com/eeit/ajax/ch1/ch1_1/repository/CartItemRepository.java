@@ -1,7 +1,8 @@
-package tw.pers.allen.ajax.tutorial.ch1.repo;
+package tw.com.eeit.ajax.ch1.ch1_1.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import tw.pers.allen.ajax.tutorial.ch1.model.CartItem;
+
+import tw.com.eeit.ajax.ch1.ch1_1.model.CartItem;
 
 public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 }

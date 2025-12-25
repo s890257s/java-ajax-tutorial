@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax.tutorial;
+package tw.com.eeit.ajax;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax.tutorial.config;
+package tw.com.eeit.ajax.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

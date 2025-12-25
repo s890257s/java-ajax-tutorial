@@ -1,4 +1,4 @@
-package tw.pers.allen.ajax.tutorial.controller.view;
+package tw.com.eeit.ajax.common.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
