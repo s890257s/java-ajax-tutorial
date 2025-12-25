@@ -1,7 +1,7 @@
 package tw.com.eeit.ajax.ch1.ch1_1.service;
 
 import jakarta.annotation.PostConstruct;
-import tw.com.eeit.ajax.ch1.ch1_1.model.CartItem;
+import tw.com.eeit.ajax.ch1.ch1_1.model.entity.CartItem;
 import tw.com.eeit.ajax.ch1.ch1_1.repository.CartItemRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,18 +18,20 @@ public class CartService {
 
     @PostConstruct
     public void init() {
-        // Init data for testing
         if (cartItemRepository.count() == 0) {
-            cartItemRepository.save(new CartItem(null, "手機", 1));
-            cartItemRepository.save(new CartItem(null, "平板", 1));
-            cartItemRepository.save(new CartItem(null, "筆電", 1));
-            cartItemRepository.save(new CartItem(null, "藍牙耳機", 1));
-            cartItemRepository.save(new CartItem(null, "耳罩式耳機", 1));
-            cartItemRepository.save(new CartItem(null, "無線滑鼠", 1));
-            cartItemRepository.save(new CartItem(null, "電視", 1));
-            cartItemRepository.save(new CartItem(null, "電競筆電", 1));
-            cartItemRepository.save(new CartItem(null, "電腦螢幕", 1));
-            cartItemRepository.save(new CartItem(null, "機械鍵盤", 1));
+            List<CartItem> items = List.of(
+                    new CartItem(null, "手機", 1),
+                    new CartItem(null, "平板", 1),
+                    new CartItem(null, "筆電", 1),
+                    new CartItem(null, "藍牙耳機", 1),
+                    new CartItem(null, "耳罩式耳機", 1),
+                    new CartItem(null, "無線滑鼠", 1),
+                    new CartItem(null, "電視", 1),
+                    new CartItem(null, "電競筆電", 1),
+                    new CartItem(null, "電腦螢幕", 1),
+                    new CartItem(null, "機械鍵盤", 1));
+
+            cartItemRepository.saveAll(items);
         }
     }
 

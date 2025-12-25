@@ -9,14 +9,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import tw.com.eeit.ajax.ch1.ch1_1.model.CartItem;
+import tw.com.eeit.ajax.ch1.ch1_1.model.entity.CartItem;
 import tw.com.eeit.ajax.ch1.ch1_1.service.CartService;
 
 import java.util.List;
 
 @Controller
 @RequestMapping("/ch1_1")
-public class Ch1_1_CartController {
+public class CartController {
 
     @Autowired
     private CartService cartService;
