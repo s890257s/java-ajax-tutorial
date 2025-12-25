@@ -1,6 +1,6 @@
 # 章節 4 ｜ 進階傳輸與檔案處理 (Advanced I/O)
 
-## 目錄
+## <a id="toc"></a>目錄
 
 - [4-1 檔案上傳實戰：FormData 與 MultipartFile](#CH4-1)
 - [4-2 檔案下載與串流：處理 Blob 資料](#CH4-2)
@@ -16,7 +16,7 @@
 
 ---
 
-## <a id="CH4-1"></a>4-1 檔案上傳實戰：FormData 與 MultipartFile
+## <a id="CH4-1"></a>[4-1 檔案上傳實戰：FormData 與 MultipartFile](#toc)
 
 要上傳檔案，JSON 格式是無能為力的（除非你把檔案轉 Base64 字串，但效率極差）。我們必須回歸到最原始的介面：`multipart/form-data`。
 
@@ -83,7 +83,7 @@ public String uploadFile(
 
 ---
 
-## <a id="CH4-2"></a>4-2 檔案下載與串流：處理 Blob 資料
+## <a id="CH4-2"></a>[4-2 檔案下載與串流：處理 Blob 資料](#toc)
 
 下載不像上傳那麼直觀。如果後端回傳二進位流，而你用一般的方式接，會變成一堆亂碼字串。
 
@@ -146,7 +146,7 @@ async function downloadImage() {
 
 ---
 
-## <a id="CH4-3"></a>4-3 複雜場景：同時上傳 JSON 與檔案
+## <a id="CH4-3"></a>[4-3 複雜場景：同時上傳 JSON 與檔案](#toc)
 
 有時候我們不只有簡單的字串描述，而是一個複雜的 JSON 物件要跟檔案一起傳。
 

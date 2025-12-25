@@ -1,6 +1,6 @@
 # 章節 3 ｜ 專業級後端 API 設計 (Professional Backend)
 
-## 目錄
+## <a id="toc"></a>目錄
 
 - [3-1 資料傳輸物件 (DTO) 深度解析](#CH3-1)
 - [3-2 物件轉換神器：BeanUtils vs MapStruct](#CH3-2)
@@ -15,7 +15,7 @@
 
 ---
 
-## <a id="CH3-1"></a>3-1 資料傳輸物件 (DTO) 深度解析
+## <a id="CH3-1"></a>[3-1 資料傳輸物件 (DTO) 深度解析](#toc)
 
 初學者最愛犯的錯誤：**直接把 Entity (資料庫物件) 回傳給前端**。
 
@@ -35,7 +35,7 @@ DTO 是一個純粹的 POJO，裡面沒有商業邏輯，只有欄位。它的�
 
 ---
 
-## <a id="CH3-2"></a>3-2 物件轉換神器：BeanUtils vs MapStruct
+## <a id="CH3-2"></a>[3-2 物件轉換神器：BeanUtils vs MapStruct](#toc)
 
 有了 DTO，我們就會面臨一個痛苦的問題：**怎麼把 Entity 轉成 DTO？**
 手寫 `dto.setName(entity.getName())` 寫十個欄位還行，寫一百個會瘋掉。
@@ -128,7 +128,7 @@ public abstract class UserMapper {
 
 ---
 
-## <a id="CH3-3"></a>3-3 接收資料的十八般武藝
+## <a id="CH3-3"></a>[3-3 接收資料的十八般武藝](#toc)
 
 後端 Controller 要怎麼接前端丟過來的東西？主要看 `Content-Type`。
 

@@ -1,6 +1,6 @@
 # 章節 2 ｜ 前端工程師的武器庫 (Modern Frontend)
 
-## 目錄
+## <a id="toc"></a>目錄
 
 - [2-1 JavaScript ES6+ 必備語法速成](#CH2-1)
 - [2-2 非同步的演進：從 Callback 到 Async/Await](#CH2-2)
@@ -19,7 +19,7 @@ Java 工程師寫 JavaScript 最常遇到的問題就是：**「為什麼這個 
 
 ---
 
-## <a id="CH2-1"></a>2-1 JavaScript ES6+ 必備語法速成
+## <a id="CH2-1"></a>[2-1 JavaScript ES6+ 必備語法速成](#toc)
 
 ### 1. 變數宣告：跟 `var` 說再見
 
@@ -112,7 +112,7 @@ const user2 = { name, age }; // 效果一樣
 
 ---
 
-## <a id="CH2-2"></a>2-2 非同步的演進：從 Callback 到 Async/Await
+## <a id="CH2-2"></a>[2-2 非同步的演進：從 Callback 到 Async/Await](#toc)
 
 這是前端最難的一關，請仔細閱讀。
 
@@ -186,7 +186,7 @@ console.log("4. 這一行會比 '2. 拿到使用者' 先執行");
 
 ---
 
-## <a id="CH2-3"></a>2-3 HTTP Client 的選擇：XHR vs Fetch vs Axios
+## <a id="CH2-3"></a>[2-3 HTTP Client 的選擇：XHR vs Fetch vs Axios](#toc)
 
 既然有了 `fetch`，為什麼大家還是喜歡用第三方套件 `axios`？
 

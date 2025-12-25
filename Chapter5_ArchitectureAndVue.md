@@ -1,6 +1,6 @@
 # 章節 5 ｜ 前端架構優化與 Vue.js 導論 (Architecture & Vue)
 
-## 目錄
+## <a id="toc"></a>目錄
 
 - [5-1 為什麼我們需要 Vue.js？](#CH5-1)
 - [5-2 Vue.js 快速上手 (CDN 模式)](#CH5-2)
@@ -19,7 +19,7 @@
 
 ---
 
-## <a id="CH5-1"></a>5-1 為什麼我們需要 Vue.js？
+## <a id="CH5-1"></a>[5-1 為什麼我們需要 Vue.js？](#toc)
 
 ### Vanilla JS (原生 JS) 的極限
 
@@ -45,7 +45,7 @@ Vue 提倡 **宣告式編程 (Declarative)** 與 **資料驅動 (Data-Driven)**�
 
 ---
 
-## <a id="CH5-2"></a>5-2 Vue.js 快速上手 (CDN 模式)
+## <a id="CH5-2"></a>[5-2 Vue.js 快速上手 (CDN 模式)](#toc)
 
 我們不用安裝 Node.js，直接在 HTML 引入 Vue。
 
@@ -127,7 +127,7 @@ Vue 提倡 **宣告式編程 (Declarative)** 與 **資料驅動 (Data-Driven)**�
 
 ---
 
-## <a id="CH5-3"></a>5-3 前後端分離的最後一哩路：安全
+## <a id="CH5-3"></a>[5-3 前後端分離的最後一哩路：安全](#toc)
 
 最後，我們來看兩個上線前必解的問題。
 
