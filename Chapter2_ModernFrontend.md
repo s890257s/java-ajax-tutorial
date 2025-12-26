@@ -12,10 +12,14 @@
 
 歡迎來到第二章。
 
-Java 工程師寫 JavaScript 最常遇到的問題就是：**「為什麼這個 JS 寫法跟我以前學的不一樣？」**
-早期的 JS (ES5) 語法鬆散，但自從 2015 年 ES6 (ECMAScript 2015) 發布後，JS 變得越來越像一門成熟的語言。
+早期的 JS (ES6 以前) 語法鬆散，但自從 2015 年 ES6 (ECMAScript 2015) 發布後，JS 變得越來越像一門成熟的語言。
 
-在開始大量寫 Ajax 之前，我們要先升級你的武器庫。這一章會帶你認識現代前端開發必備的語法糖與工具。
+在開始寫 Ajax 之前，我們要先升級你的武器庫。這一章會帶你認識現代前端開發必備的語法糖與工具。
+
+> 💡 小知識：ECMAScript 與 JavaScript 的關係
+>
+> ECMAScript (ES) 是 JavaScript 的「語言規格書 (Specification)」，定義了語法與核心行為。
+> JavaScript (JS) 則是目前最主流、最廣泛使用的 ECMAScript 實作 (Implementation)。
 
 ---
 
@@ -23,8 +27,8 @@ Java 工程師寫 JavaScript 最常遇到的問題就是：**「為什麼這個 
 
 ### 1. 變數宣告：`const` vs `let`
 
-以前我們有 `var`，但它有奇怪的作用域問題，現在請直接無視它。
-現代開發請遵守這條黃金法則：**「能用 `const` 就用 `const`，真的要變才用 `let`」**。
+ES6 以前我們使用 `var`，但它有奇怪的作用域問題、容易產生各種 BUG，現在請直接無視它。
+現代開發請遵守這條黃金法則：**「能用 `const` 就用 `const`，真的要改變才用 `let`」**。
 
 - **`const` (常數) - 預設首選**
 
@@ -32,7 +36,7 @@ Java 工程師寫 JavaScript 最常遇到的問題就是：**「為什麼這個 
   - **好處**：
     1.  **安全**：避免變數被意外覆寫 (例如不小心把 `apiUrl` 改成別的字串)。
     2.  **可讀性**：看到 `const` 就知道，這個變數在函式後面不會變成別的東西。
-  - **注意**：如果是物件/陣列，`const` 保護的是「變數不能指派給別人」，但「內容」是可以修改的。
+  - **注意**：如果是物件/陣列，`const` 保護的是「變數不能重新指派」，但「內容」是可以修改的。
 
 - **`let` (變數)**
   - 只有在真的需要**重新賦值**時才使用，例如 `for` 迴圈的 `i`，或狀態切換 (`isLoading` false -> true)。
@@ -182,15 +186,17 @@ const user = {
 
 // 傳統寫法
 const name = user.username;
-const city = user.address.city;
 
-// 解構寫法 (變數名稱必須對應 Key)
+// 基本解構
+const { username, email } = user;
+console.log(username); // Alice
+console.log(email); // Alice@example.com
+
+// 進階：多層解構
 const {
-  username,
-  email,
   address: { city },
 } = user;
-console.log(username, city); // Alice, Taipei
+console.log(city); // Taipei
 ```
 
 ### 5. 展開運算子 (Spread Operator)
@@ -208,6 +214,19 @@ const updatedUser = { ...user, age: 26, city: "Taipei" };
 // { name: "Alice", age: 26, city: "Taipei" }
 ```
 
+**注意：展開運算子僅為「淺拷貝 (Shallow Copy)」**
+若物件內包含巢狀物件（例如 `address`），展開運算子只會複製參照。修改新物件的屬性會影響原物件。
+
+若需**深層拷貝 (Deep Copy)**，最簡單的方式是使用 `JSON` 方法：
+
+```javascript
+const user = { name: "Alice", address: { city: "台北市" } };
+const deepCopiedUser = JSON.parse(JSON.stringify(user));
+
+deepCopiedUser.address.city = "台中市";
+console.log(user.address.city); // 台北市 (不受影響)
+```
+
 ### 6. 常用陣列方法
 
 現代 JS 處理資料流的核心，告別傳統 `for` 迴圈。這些方法大部分**不會改變原陣列**，而是回傳新結果。
@@ -220,8 +239,22 @@ const updatedUser = { ...user, age: 26, city: "Taipei" };
   const doubled = nums.map((n) => n * 2); // [2, 4, 6]
   ```
 - **`reduce()`**：將陣列歸納為單一值 (例如加總)。
+
+  功能最強大的陣列方法(稍微複雜)，能將陣列元素經由回呼函式運算，最終化為「單一值」（可能是數字、物件或陣列）。
+
+  **語法結構：**
+  `array.reduce((acc, curr) => { ... }, initialValue)`
+
+  - `acc` (accumulator): 累加值，即上一次回呼函式的回傳值。
+  - `curr` (current): 當前處理的元素。
+  - `initialValue`: 累加值的初始設定（選填，但建議加上）。
+
   ```javascript
-  const sum = nums.reduce((acc, curr) => acc + curr, 0); // 6
+  const numbers = [1, 2, 3, 4];
+  const sum = numbers.reduce((acc, curr) => {
+    return acc + curr;
+  }, 0);
+  // 初始值 0，依序加 1, 2, 3, 4 => 結果 10
   ```
 
 #### Filtering & Finding (過濾與尋找)
@@ -259,17 +292,37 @@ const updatedUser = { ...user, age: 26, city: "Taipei" };
 將程式拆分成小檔案，易於維護與重用。使用 `export` 匯出，`import` 匯入。
 (注意：在瀏覽器直接使用需要 `<script type="module">`，通常會搭配 Webpack/Vite 等工具打包)
 
+**具名匯出 (Named Export)：**
+可以匯出多個變數或函式。需使用 `{}` 接收。
+
 ```javascript
 // math.js
 export const add = (a, b) => a + b;
-export default function log(msg) {
-  console.log(msg);
-}
+export const pi = 3.14;
+```
 
-// main.js
-import log, { add } from "./math.js";
+**匯入具名成員：**
+需使用 `{}` 且名稱需對應（或使用 `as` 重新命名）。
 
-log(add(1, 2));
+```javascript
+import { add, pi } from "./math.js";
+console.log(add(1, 2)); // 3
+```
+
+**預設匯出 (Default Export)：**
+每個檔案只能有一個預設匯出，通常用於匯出元件或主要功能。不需 `{}` 接收。
+
+```javascript
+// user.js
+const user = { name: "Alice" };
+export default user;
+```
+
+**匯入預設成員：**
+不需 `{}`，且可以自訂名稱。
+
+```javascript
+import currentUser from "./user.js";
 ```
 
 ---
@@ -283,66 +336,269 @@ JavaScript 是**單執行緒 (Single Threaded)** 的語言，這意味著它一�
 
 **非同步 (Asynchronous)** 就是解決方案：把耗時的任務交給瀏覽器背景處理，主程式繼續往下跑，等任務好了再回來通知我。
 
-### 2. 回呼地獄 (Callback Hell)
+> **💡 備註: 關於瀏覽器中 JavaScript 的運行機制 (此不討論 node.js)**
+> JavaScript 在瀏覽器中運行時，只有一條主要執行緒，並依循「解析 → 執行」的順序處理程式碼；也因此，JS 在同一時間只能進行一項任務。
+> 當遇到耗時或複雜的工作時，JS 會將這些任務交由瀏覽器處理，避免阻塞主執行緒，確保畫面與操作仍維持順暢。
+> 瀏覽器本身擁有多條專責執行緒，例如：
+>
+> - Timer Thread：負責管理 setTimeout、setInterval
+> - Network Thread：處理 AJAX、fetch 等網路請求
+> - I/O Thread：負責 DOM 事件、檔案讀取等輸入輸出操作
+> - Rendering Thread：掌控畫面排版與重新繪製
+> - Web Worker Thread：提供真正獨立的 JS 執行緒，專門處理大量計算；與主執行緒完全隔離，無法操作 DOM，也不具備 window 物件。
+>   模擬行為可參考 https://www.jsv9000.app/
 
-早期的做法是把函式當參數傳進去 (Callback)，等任務完成後呼叫。但當依賴變多時，會變成波動拳。
+### 2. 回呼地獄 (Callback Hell)，以下為演示程式碼，此寫法已被淘汰
+
+非同步任務（如 `fetch`、`setTimeout`）雖然會依照程式碼順序**逐行啟動**，但啟動後會交由瀏覽器在背景處理，**完成時間不固定**  
+以下寫法**無法保證執行結果的順序**，若有資料依賴關係，將會導致嚴重的邏輯錯誤。
 
 ```javascript
-getData(function (a) {
-  getMoreData(a, function (b) {
-    getMoreData(b, function (c) {
-      // 巢狀地獄，可讀性極差，難以維護
-    });
+// 隨機取得延遲時間 0~999 毫秒
+const getRandomDelay = () => Math.floor(Math.random() * 1000);
+
+// 模擬非同步操作
+const asyncProcess = (str) => {
+  setTimeout(() => {
+    console.log("執行操作: " + str);
+  }, getRandomDelay());
+};
+
+// 執行非同步操作，完成時間不固定，無法保證順序，會導致嚴重的邏輯錯誤。
+asyncProcess("1. 取得使用者...");
+asyncProcess("2. 根據使用者取得訂單...");
+asyncProcess("3. 根據訂單取得商品總數...");
+asyncProcess("4. 根據商品總數計算總價...");
+asyncProcess("5. 顯示總價...");
+```
+
+我們現在把原方法 `asyncProcess(str)`，改為 `asyncProcess(str, successCallback)`。
+也就是說，當 asyncProcess 執行成功後，會主動呼叫 successCallback。
+
+```javascript
+// 把「方法」當成參數傳入 asyncProcess，asyncProcess 執行成功後，會主動呼叫(即是 callback function)。
+const asyncProcess = (str, successCallback) => {
+  setTimeout(() => {
+    console.log("執行操作: " + str);
+    successCallback(); // 主動執行下一個方法
+  }, getRandomDelay());
+};
+
+// 逐步執行非同步操作
+asyncProcess("1. 取得使用者...", () => {
+  asyncProcess("2. 根據使用者取得訂單...", () => {
+    // 依序串接...
   });
 });
 ```
 
-### 3. Promise
-
-ES6 引入了 Promise (承諾)，將非同步操作標準化為一個物件。它有三種狀態：
-
-1.  **Pending** (等待中)
-2.  **Fulfilled** (成功) -> 執行 `.then()`
-3.  **Rejected** (失敗) -> 執行 `.catch()`
-
-Promise 解決了縮排問題，變成「鏈式呼叫 (Chaining)」。
+但執行非同步操作，不能保證一定會成功，應要考慮失敗時該執行的程式。
+故在原方法中加入錯誤處理，方法會變成 `asyncProcess(str, successCallback, errorCallback)`。
 
 ```javascript
-fetch(url)
-  .then((res) => res.json())
-  .then((data) => console.log(data))
-  .catch((err) => console.error(err));
+// 補上錯誤處理，此範例使用隨機數決定成敗，真實程式會有明確的錯誤處理判斷
+const asyncProcess = (str, successCallback, errorCallback) => {
+  setTimeout(() => {
+    console.log("執行操作: " + str);
+
+    // 成功率 90%
+    if (Math.random() <= 0.9) {
+      successCallback(); // 成功執行
+    } else {
+      errorCallback(); // 失敗執行
+    }
+  }, getRandomDelay());
+};
+
+// 完整寫法，Callback Hell，回呼地獄；難以維護、難以閱讀，也有「波動拳 Hadouken」的別稱。
+asyncProcess(
+  "1. 取得使用者...",
+  () => {
+    asyncProcess(
+      "2. 根據使用者取得訂單...",
+      () => {
+        asyncProcess(
+          "3. 根據訂單取得商品總數...",
+          () => {
+            asyncProcess(
+              "4. 根據商品總數計算總價...",
+              () => {
+                asyncProcess(
+                  "5. 顯示總價...",
+                  () => {
+                    console.log("全部完成 Success!");
+                  },
+                  () => console.log("失敗: 5")
+                );
+              },
+              () => console.log("失敗: 4")
+            );
+          },
+          () => console.log("失敗: 3")
+        );
+      },
+      () => console.log("失敗: 2")
+    );
+  },
+  () => console.log("失敗: 1")
+);
 ```
+
+<div style="display: flex; justify-content: center;">
+  <img src="./images/Hadouken.webp" width="300" style="border-radius: 10px;">
+</div>
+<p align="center"><i>Callback Hell 又被戲稱為波動拳 (Hadouken)</i></p>
+
+### 3. Promise
+
+ES6 引入了 Promise (承諾)，這是現代非同步開發的基石。簡單來說，它將非同步操作標準化為一個物件，讓你用更優雅的方式處理「未來才會發生」的事件。
+
+Promise 有三種狀態：
+
+1.  **Pending** (等待中)：初始狀態，操作尚未完成。
+2.  **Fulfilled** (已實現/成功)：操作成功完成 -> 觸發 `.then()`。
+3.  **Rejected** (已拒絕/失敗)：操作失敗 -> 觸發 `.catch()`。
+
+**實戰：解決 Callback Hell**
+
+Promise 最主要的功能就是解決回呼地獄的「縮排」與「錯誤處理」問題。它將巢狀結構改為「鏈式呼叫 (Chaining)」，讓程式碼由上而下線性執行，閱讀性大幅提升。
+
+```javascript
+// Promise 基本語法
+const myPromise = new Promise((resolve, reject) => {
+  // 執行非同步任務 (例如 API 請求、計時器等)
+  const isSuccess = true;
+
+  if (isSuccess) {
+    resolve("任務成功！這是回傳的資料"); // 進入 .then()
+  } else {
+    reject("任務失敗...這是錯誤訊息"); // 進入 .catch()
+  }
+});
+
+// 使用 Promise
+myPromise
+  .then((data) => {
+    // 成功時的處理邏輯
+    console.log(data);
+  })
+  .catch((error) => {
+    // 失敗時的處理邏輯
+    console.error(error);
+  })
+  .finally(() => {
+    // 無論成功或失敗，最後都會執行的區塊 (例如：隱藏讀取動畫)
+    console.log("程序結束");
+  });
+```
+
+我們將上面的 `asyncProcess` 改寫為 Promise 版本，請看差異：
+
+```javascript
+// 1. 定義：回傳一個 Promise 物件
+const asyncProcess = (str) => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      console.log("執行操作: " + str);
+
+      // 模擬成功與失敗
+      if (Math.random() <= 0.9) {
+        resolve(); // 成功 -> 對應 .then()
+      } else {
+        reject("執行失敗: " + str); // 失敗 -> 對應 .catch()
+      }
+    }, getRandomDelay());
+  });
+};
+
+// 2. 呼叫：優雅的鏈式串接
+asyncProcess("1. 取得使用者...")
+  .then(() => {
+    // 步驟 1 成功後，回傳下一個 Promise (步驟 2)
+    return asyncProcess("2. 根據使用者取得訂單...");
+  })
+  .then(() => asyncProcess("3. 根據訂單取得商品總數...")) // 箭頭函式簡寫
+  .then(() => asyncProcess("4. 根據商品總數計算總價..."))
+  .then(() => asyncProcess("5. 顯示總價..."))
+  .then(() => console.log("全部完成 Success!"))
+  .catch((error) => {
+    // ⚠️ 強大的錯誤處理：只要中間任何一步驟失敗，就會直接跳到這裡！
+    // 不用像 Callback 每一層都要寫一次錯誤處理。
+    console.error("嗚嗚，流程中斷了:", error);
+  });
+```
+
+這樣是不是清爽多了？而且只要一個 `.catch()` 就能捕獲整條鏈上的錯誤！
 
 ### 4. Async / Await
 
-ES8 (2017) 引入，這是 Promise 的**語法糖**，也是目前**最推薦**的寫法。
-它讓非同步程式碼看起來就像同步程式碼一樣直觀，try-catch 也可以直接使用。
+ES8 (2017) 推出的 `async` / `await` 是 Promise 的語法糖，也是目前**最主流、最推薦**的寫法。
+它讓非同步程式碼讀起來跟「同步程式碼」幾乎一樣，不僅直觀，還能直接使用 `try-catch` 進行錯誤處理。
 
-- **`async`**：宣告函式為非同步，回傳 Promise。
-- **`await`**：暫停執行，直到 Promise 解析完成。
+- **`async`**：將函式標記為非同步，該函式會自動回傳一個 Promise。
+- **`await`**：只能在 `async` 函式內使用。它會暫停程式執行，直到 Promise 解析完成並回傳結果。
+
+**基本語法結構**
+
+使用 `await` 可以直接將 Promise 的解析結果 (Resolve Value) 賦值給變數，就像寫同步程式碼一樣直覺。
 
 ```javascript
-async function initData() {
+const getData = async () => {
   try {
-    console.log("1. 開始請求");
+    // await 會暫停並等待 Promise 完成，然後將結果回傳給變數
+    const user = await fetchUser();
+    console.log("取得使用者:", user);
 
-    // 程式在此暫停，等待回應
-    const response = await fetch("/api/user");
-    const user = await response.json();
-
-    console.log("2. 拿到使用者:", user.name);
+    // 接續執行下一個非同步任務
+    const orders = await fetchOrders(user.id);
+    console.log("取得訂單:", orders);
   } catch (error) {
+    // 統一捕捉錯誤 (包含 user 或 orders 失敗)
     console.error("發生錯誤:", error);
   }
-}
+};
 ```
+
+**用 Async/Await 改寫 Callback Hell**
+
+我們將上面的 Promise 鏈式寫法，改成 Async/Await 版本。你會發現，那些 `.then()` 全部都不見了，程式碼變得非常乾淨！
+
+```javascript
+// 建立一個 async 函式來管理流程
+const startFlow = async () => {
+  try {
+    console.log("任務開始...");
+
+    // 就像寫同步程式碼一樣，一行一行往下執行
+    await asyncProcess("1. 取得使用者...");
+    await asyncProcess("2. 根據使用者取得訂單...");
+    await asyncProcess("3. 根據訂單取得商品總數...");
+    await asyncProcess("4. 根據商品總數計算總價...");
+    await asyncProcess("5. 顯示總價...");
+
+    console.log("全部完成 Success!");
+  } catch (error) {
+    // 只要上面任何一行出錯，就會直接跳到這裡
+    console.error("嗚嗚，流程中斷了:", error);
+  }
+};
+
+// 執行函式
+startFlow();
+```
+
+**比較一下差異：**
+
+1.  **Callback**: 向右長胖 (波動拳)，巢狀地獄。
+2.  **Promise**: 向下生長，但還是要寫很多 `.then()` 跟回呼函式。
+3.  **Async/Await**: **乾淨俐落**，就像在寫一般同步的程式碼。
 
 ---
 
 ## <a id="CH2-3"></a>[2-3 HTTP Client 的選擇：XHR vs Fetch vs Axios](#toc)
 
-既然有了 `fetch`，為什麼大家還是喜歡用第三方套件 `axios`？
+學會了 Async/Await 這些強大的「內功心法」後，我們接下來要挑選一把趁手的「兵器」來發送網路請求。
+前端界主要有三種發送 HTTP Request 的方式，讓我們來看看它們的演進與優缺點。
 
 ### 選手 1: XMLHttpRequest (XHR)
 
