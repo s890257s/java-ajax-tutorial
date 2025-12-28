@@ -1,4 +1,4 @@
-package tw.com.eeit.ajax.ch1.ch1_1.model.entity;
+package tw.com.eeit.ajax.ch1_1.model.entity;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

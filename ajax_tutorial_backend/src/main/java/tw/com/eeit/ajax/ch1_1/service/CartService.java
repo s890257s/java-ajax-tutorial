@@ -1,8 +1,8 @@
-package tw.com.eeit.ajax.ch1.ch1_1.service;
+package tw.com.eeit.ajax.ch1_1.service;
 
 import jakarta.annotation.PostConstruct;
-import tw.com.eeit.ajax.ch1.ch1_1.model.entity.CartItem;
-import tw.com.eeit.ajax.ch1.ch1_1.repository.CartItemRepository;
+import tw.com.eeit.ajax.ch1_1.model.entity.CartItem;
+import tw.com.eeit.ajax.ch1_1.repository.CartItemRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;

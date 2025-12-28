@@ -1,10 +1,10 @@
-package tw.com.eeit.ajax.ch1.ch1_2.service;
+package tw.com.eeit.ajax.ch1_2.service;
 
 import java.util.List;
 
 import org.springframework.stereotype.Service;
 
-import tw.com.eeit.ajax.ch1.ch1_2.model.User;
+import tw.com.eeit.ajax.ch1_2.model.User;
 
 @Service
 public class UserService {

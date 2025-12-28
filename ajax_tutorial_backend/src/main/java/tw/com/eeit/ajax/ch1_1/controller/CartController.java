@@ -1,4 +1,4 @@
-package tw.com.eeit.ajax.ch1.ch1_1.controller;
+package tw.com.eeit.ajax.ch1_1.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
@@ -9,8 +9,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
-import tw.com.eeit.ajax.ch1.ch1_1.model.entity.CartItem;
-import tw.com.eeit.ajax.ch1.ch1_1.service.CartService;
+import tw.com.eeit.ajax.ch1_1.model.entity.CartItem;
+import tw.com.eeit.ajax.ch1_1.service.CartService;
 
 import java.util.List;
 

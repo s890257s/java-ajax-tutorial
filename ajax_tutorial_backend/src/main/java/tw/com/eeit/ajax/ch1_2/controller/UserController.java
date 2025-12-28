@@ -1,4 +1,4 @@
-package tw.com.eeit.ajax.ch1.ch1_2.controller;
+package tw.com.eeit.ajax.ch1_2.controller;
 
 import java.util.List;
 

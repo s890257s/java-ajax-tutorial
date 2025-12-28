@@ -1,4 +1,4 @@
-package tw.com.eeit.ajax.ch1.ch1_2.model;
+package tw.com.eeit.ajax.ch1_2.model;
 
 import java.util.List;
 
