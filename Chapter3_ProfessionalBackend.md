@@ -21,25 +21,109 @@
 後端工程師最常聽到的詞就是 **RESTful API**。它不是一種程式語言，也不是一種協定，而是一種 **「軟體架構風格」 (Architectural Style)**。
 REST 全名 **Representational State Transfer** (表現層狀態轉移)。聽起來很抽象，簡單來說就是：**把這個世界看作是一堆「資源 (Resource)」，我們透過 HTTP 動詞來對這些資源進行操作。**
 
-### 1. 基本介紹 & 資源 (Resources)
+### 1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)
 
-在 REST 的世界裡，**URL (Uniform Resource Locator)** 應該只代表「名詞」，不要出現動詞。
+在 RESTful 的設計理念中，我們將網路上的事物抽象為 **資源 (Resource)**。而設計 API 時的核心原則就是：「**URL 是名詞，HTTP Method 是動詞**」。
 
-- ❌ 錯誤示範：`/api/getAllUsers`, `/api/createUser`, `/api/deleteUser?id=1`
-- ✅ 正確示範：`/api/users`
+#### === URL 僅代表資源 (名詞)===
+
+**URL (Uniform Resource Locator)** 就像是網路上的地址，它應該只負責「定位資源」，因此 **只能包含名詞**，不應出現動詞。
+
+- ❌ **錯誤示範 (URL 含動詞)**：`/api/getAllUsers`, `/api/createUser`, `/api/deleteUser?id=1`
+- ✅ **正確示範 (僅含名詞)**：
+  - `/api/users` (代表使用者集合)
+  - `/api/users/1` (代表特定使用者資源)
+
+#### === HTTP 請求方法 (HTTP Methods) - 定義動詞 ===
+
+要對資源進行什麼操作，應由 **HTTP 協定定義的標準請求方法** 來決定。常見的方法與應用場景如下：
+
+- **GET (讀取)**
+  - **定義**：請求獲取指定資源的表示形式。應為安全且冪等。
+  - **場景**：取得使用者列表、查詢單筆訂單詳情。
+- **POST (新增)**
+  - **定義**：提交實體以建立新的資源。
+  - **場景**：註冊會員、建立新訂單、上傳檔案。
+- **PUT (整筆替換)**
+  - **定義**：用請求的 Payload **完整替換** 目標資源 (All or Nothing)。
+  - **場景**：更新使用者的「所有」資料 (若某些欄位沒傳，可能會被清空)。
+- **PATCH (部分更新)**
+  - **定義**：對資源進行 **部分修改** (Partial Update)。
+  - **場景**：只修改密碼、只變更狀態 (Active/Inactive)。
+- **DELETE (刪除)**
+  - **定義**：請求伺服器刪除指定資源。
+  - **場景**：刪除文章、移除我的最愛。
 
 ### 2. API 寫法、HTTP 請求與語意
 
 RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)：
 
-| 動作              | HTTP Method | URL 範例   | 語意 (Semantics)          | 冪等性 (Idempotent)          |
-| :---------------- | :---------- | :--------- | :------------------------ | :--------------------------- |
-| **查詢 (Read)**   | `GET`       | `/users`   | 取得所有使用者            | ✅ 是 (多次呼叫結果相同)     |
-| **查詢 (Read)**   | `GET`       | `/users/1` | 取得 ID=1 的使用者        | ✅ 是                        |
-| **新增 (Create)** | `POST`      | `/users`   | 新增一個使用者            | ❌ 否 (每次呼叫都會新增一筆) |
-| **修改 (Update)** | `PUT`       | `/users/1` | **整筆** 替換 ID=1 的資料 | ✅ 是                        |
-| **修改 (Patch)**  | `PATCH`     | `/users/1` | **部分** 更新 ID=1 的資料 | ❌ 否 (視實作而定，通常不是) |
-| **刪除 (Delete)** | `DELETE`    | `/users/1` | 刪除 ID=1 的使用者        | ✅ 是                        |
+<table aria-label="HTTP 請求方法與操作對照" class="table table-sm margin-top-none">
+<thead>
+<tr>
+<th><strong>資源 (Resource)</strong></th>
+<th><strong>GET (查詢)</strong><br><small>✅ 冪等</small></th>
+<th><strong>POST (新增)</strong><br><small>❌ 非冪等</small></th>
+<th><strong>PUT (置換)</strong><br><small>✅ 冪等</small></th>
+<th><strong>PATCH (修改)</strong><br><small>❌ 非冪等</small></th>
+<th><strong>DELETE (刪除)</strong><br><small>✅ 冪等</small></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/users</code></td>
+<td>取得所有使用者</td>
+<td>新增一個使用者</td>
+<td>語意錯誤</td>
+<td>語意錯誤</td>
+<td>語意錯誤</td>
+</tr>
+<tr>
+<td><code>/users/{id}</code></td>
+<td>取得指定 ID 使用者</td>
+<td>語意錯誤</td>
+<td>整筆替換指定資料</td>
+<td>部分更新指定資料</td>
+<td>刪除指定 ID 使用者</td>
+</tr>
+</tbody>
+</table>
+
+> **📝 備註：深入理解冪等性 (Idempotency)**
+>
+> **1. 定義**
+> 這是 HTTP 規範中的術語，意思是：「**對同一筆資料進行一次亦或多次操作，伺服器的最終狀態應該是相同的**」。
+>
+> **2. 為什麼這很重要？**
+> - **決定能否「安全重試 (Retry)」**：這是實務上最重要的用途。當 Client 發出請求但因網路斷線沒收到回應時：
+>   - 若是 **冪等** 操作 (如 `PUT`, `DELETE`)：Client 可以放心地自動重試，不用擔心副作用 (例如重複扣款)。
+>   - 若 **非冪等** 操作 (如 `POST`)：絕對不能隨便自動重試，否則可能會造成「重複下單」或「重複建立資料」的災難。
+> - **快取機制 (Caching)**：CDN 或瀏覽器只敢對冪等且安全的方法 (如 `GET`) 做快取。
+>
+> **3. 範例對照**
+> - ✅ **冪等 (`DELETE /users/1`)**：第一次請求刪除成功；第二次請求雖會回傳 404 (Not Found)，但資料庫「沒有該使用者」的**狀態**維持不變。
+> - ❌ **非冪等 (`POST /users`)**：每次請求都會「新增」一筆全新的資料 (Id 1, Id 2, ...)，改變了伺服器的狀態。
+>
+> **4. 常見面試題：為什麼 PATCH 不是冪等？**
+> 雖然只是改欄位，看起來很像冪等，但 HTTP 協定允許 PATCH 包含「操作指令」而不僅是數據。
+> - **場景 A (像冪等)**：`{ "email": "new@example.com" }` -> 重試 N 次結果都一樣 (Email 都是新的)。
+> - **場景 B (非冪等)**：`{ "operation": "add", "value": 100 }` (如增加餘額) -> 重試 N 次會導致餘額重複增加。
+>
+> 因為 PATCH 允許場景 B 的存在，所以規範將其定義為 **非冪等**，瀏覽器與 CDN 也不會對其進行自動重試或快取。
+
+> **💡 思考練習：該怎麼為「結帳 (Checkout)」API 命名？**
+>
+> 假設你要設計一個 API，讓會員 ID=1 進行購物車結帳付款。直覺上你可能會想用動詞：
+> - ❌ **直覺想法**：`POST /users/1/pay` 或 `POST /checkout`
+> - **問題點**：REST 風格不喜歡動詞出現在 URL。
+>
+> **RESTful 的拆解思路**：
+> 「結帳」這個動作，其實本質上就是「建立了一筆訂單」。所以我們應該把重點放在產生的**資源 (Resource)** 上。
+>
+> - ✅ **正確解答**：`POST /users/1/orders`
+> - **語意**：對使用者 1 新增一筆訂單資源 (Create Order)。這樣既符合 REST 的名詞規範，也清楚表達了業務含義。
+
+
 
 ### 3. 進階結構嵌套 (Nesting)
 
