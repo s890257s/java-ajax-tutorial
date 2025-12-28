@@ -55,7 +55,7 @@ let count = 0;
 count++; // ✅ OK!
 ```
 
-> **備註：為什麼使用 `const` 是現代開發趨勢？**
+> **💡 備註：為什麼使用 `const` 是現代開發趨勢？**
 >
 > 1.  **降低「意外被改掉」的風險 (這超重要)**
 >
@@ -107,7 +107,7 @@ const add = (a, b) => a + b; // 連 return 都可以省略
 fetch(url).then((response) => response.json());
 ```
 
-> **進階觀念：關於 `this` 的指向**
+> **💡 進階觀念：關於 `this` 的指向**
 >
 > 箭頭函式沒有自己的 `this`，它會**繼承外層宣告時**的 `this`。
 > 這在撰寫物件方法或 Ajax Callback 時要特別注意：
@@ -290,7 +290,7 @@ console.log(user.address.city); // 台北市 (不受影響)
 ### 7. 模組化 (Modules)
 
 將程式拆分成小檔案，易於維護與重用。使用 `export` 匯出，`import` 匯入。
-(注意：在瀏覽器直接使用需要 `<script type="module">`，通常會搭配 Webpack/Vite 等工具打包)
+(注意：在瀏覽器直接使用需要宣告 `<script type="module">`，通常會搭配 Webpack/Vite 等工具打包)
 
 **具名匯出 (Named Export)：**
 可以匯出多個變數或函式。需使用 `{}` 接收。
@@ -346,7 +346,8 @@ JavaScript 是**單執行緒 (Single Threaded)** 的語言，這意味著它一�
 > - I/O Thread：負責 DOM 事件、檔案讀取等輸入輸出操作
 > - Rendering Thread：掌控畫面排版與重新繪製
 > - Web Worker Thread：提供真正獨立的 JS 執行緒，專門處理大量計算；與主執行緒完全隔離，無法操作 DOM，也不具備 window 物件。
->   模擬行為可參考 https://www.jsv9000.app/
+>
+> 模擬行為可參考 https://www.jsv9000.app/
 
 ### 2. 回呼地獄 (Callback Hell)，以下為演示程式碼，此寫法已被淘汰
 
@@ -459,8 +460,6 @@ Promise 有三種狀態：
 2.  **Fulfilled** (已實現/成功)：操作成功完成 -> 觸發 `.then()`。
 3.  **Rejected** (已拒絕/失敗)：操作失敗 -> 觸發 `.catch()`。
 
-**實戰：解決 Callback Hell**
-
 Promise 最主要的功能就是解決回呼地獄的「縮排」與「錯誤處理」問題。它將巢狀結構改為「鏈式呼叫 (Chaining)」，讓程式碼由上而下線性執行，閱讀性大幅提升。
 
 ```javascript
@@ -492,7 +491,9 @@ myPromise
   });
 ```
 
-我們將上面的 `asyncProcess` 改寫為 Promise 版本，請看差異：
+**💻 實戰：解決 Callback Hell**
+
+我們將上面範例中的 `asyncProcess` 改寫為 Promise 版本，請看差異：
 
 ```javascript
 // 1. 定義：回傳一個 Promise 物件
@@ -559,11 +560,25 @@ const getData = async () => {
 };
 ```
 
-**用 Async/Await 改寫 Callback Hell**
+**💻 實戰：用 Async/Await 改寫 Promise 鏈式寫法**
 
 我們將上面的 Promise 鏈式寫法，改成 Async/Await 版本。你會發現，那些 `.then()` 全部都不見了，程式碼變得非常乾淨！
 
 ```javascript
+const asyncProcess = (str) => {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      console.log("執行操作: " + str);
+
+      if (Math.random() <= 0.9) {
+        resolve();
+      } else {
+        reject("執行失敗: " + str);
+      }
+    }, getRandomDelay());
+  });
+};
+
 // 建立一個 async 函式來管理流程
 const startFlow = async () => {
   try {
@@ -597,70 +612,177 @@ startFlow();
 
 ## <a id="CH2-3"></a>[2-3 HTTP Client 的選擇：XHR vs Fetch vs Axios](#toc)
 
-學會了 Async/Await 這些強大的「內功心法」後，我們接下來要挑選一把趁手的「兵器」來發送網路請求。
-前端界主要有三種發送 HTTP Request 的方式，讓我們來看看它們的演進與優缺點。
+掌握了 Async/Await 非同步處理的概念後，接下來我們要實際與後端伺服器進行溝通。
+在前端開發中，主要有三種發送 HTTP 請求的方式，讓我們來看看它們的演進與特性。
 
 ### 選手 1: XMLHttpRequest (XHR)
 
-- **優點**：相容性好（甚至支援 IE6）。
-- **缺點**：語法醜陋、Callback 地獄、不支援 Promise。
-- **結論**：除了考古，別用了。
+這是早期的 AJAX 實作方式，現在已經鮮少直接使用。
+
+- **優點**：相容性極佳（支援 IE6）。
+- **缺點**：
+  - 語法繁瑣，需處理複雜的狀態碼。
+  - 容易陷入 Callback Hell。
+  - 不支援 Promise。
+
+**程式範例：**
+
+```javascript
+var xhr = new XMLHttpRequest();
+xhr.open("GET", "http://localhost:8080/ch2_3/api/todo/1");
+
+xhr.onreadystatechange = function () {
+  if (xhr.readyState === 4) {
+    // 請求完成
+    if (xhr.status === 200) {
+      // 成功
+      console.log(JSON.parse(xhr.responseText));
+    } else {
+      console.error("出錯了");
+    }
+  }
+};
+
+xhr.send();
+```
 
 ### 選手 2: Fetch API
 
-- **優點**：瀏覽器內建，不用下載 jar/npm 包。
+隨著 ES6 推出的現代瀏覽器內建標準。
+
+- **優點**：瀏覽器內建，無需額外安裝 Library。
 - **缺點**：
-  - **不會自動拋出錯誤**：404 或 500 對 fetch 來說也是「成功連線」，不會進 `catch`，要手動判斷 `response.ok`。
-  - **不會自動轉 JSON**：每次都要多寫 `.then(res => res.json())`。
-  - **不支援請求逾時 (Timeout)**：要搭配 AbortController，很麻煩。
-  - **無法攔截請求 (Interceptors)**：沒辦法全域統一加 Token。
+  - **需手動處理錯誤**：HTTP 404 或 500 仍會視為「成功」，不會自動進入 `catch`，需自行判斷 `response.ok`。
+  - **需手動轉換 JSON**：需多一道 `.json()` 的手續。
+  - **功能較陽春**：不支援請求逾時 (Timeout) 設定（需搭配 AbortController）、無內建攔截器 (Interceptors)。
+
+**程式範例：**
+
+```javascript
+fetch("http://localhost:8080/ch2_3/api/todo/1")
+  .then((response) => {
+    // Fetch 不會自動過濾 4xx, 5xx 錯誤，需手動判斷
+    if (!response.ok) {
+      throw new Error("網路回應不正常");
+    }
+    return response.json(); // 需手動轉為 JSON
+  })
+  .then((data) => console.log(data))
+  .catch((error) => console.error("發生錯誤:", error));
+```
 
 ### 選手 3: Axios
 
-這是目前業界標準的 HTTP Client 函式庫。
+目前業界最廣泛使用的第三方 HTTP Client 函式庫。
 
 - **優點**：
-  - **自動轉換 JSON**：拿到資料直接就是 Object。
-  - **更合理的錯誤處理**：只要 Status Code 不是 2xx，直接拋出 Exception 進 `catch`。
-  - **攔截器 (Interceptors)**：可以在請求送出前（如加 Token）或回應回來後（如統一處理 401）插入邏輯。
-  - **寫法簡潔**。
+  - **自動轉換 JSON**：取得的資料會自動轉為 JavaScript Object。
+  - **合理的錯誤處理**：只要 Status Code 不是 2xx，就會自動拋出錯誤進入 `catch`。
+  - **功能強大**：支援攔截器 (Interceptors)、請求取消、上傳進度監聽等。
+  - **語法簡潔**：支援 Promise 與 Async/Await。
+
+**程式範例：**
+
+```javascript
+// 發送 GET 請求 (查詢資料)
+axios
+  .get("http://localhost:8080/ch2_3/api/todo", {
+    // params: { userId: 1 }, // (選填) Axios 會自動幫你把參數串在網址後面
+  })
+  .then((response) => {
+    // Axios 回傳的 response 物件包含豐富資訊：
+    console.log("Status Code:", response.status); // 狀態碼 (ex: 200)
+    console.log("Headers:", response.headers); // 回應標頭
+    console.log("Data:", response.data); // 伺服器回傳的資料 (已自動轉為 JSON 物件)
+  })
+  .catch((error) => {
+    // 只要是 4xx 或 5xx 的錯誤都會進到這裡
+    console.error("請求失敗:", error);
+  });
+```
 
 #### Axios 實例化範例
 
-在專案中，我們通常不會直接用 `axios.get`，而是會先創造一個實例 (Instance) 來設定共用參數。
+在實務開發中，為了方便管理與維護，我們通常會將 Axios 封裝成一個獨立的檔案 (`apiClient.js`)，並在此統一處理「請求設定」與「錯誤攔截」。
 
-```html
-<!-- 引入 Axios CDN -->
-<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+**1. 建立獨立的 API Client (`api/apiClient.js`)**
 
-<script>
-  // 建立一個專屬於我們後端的 api client
-  const apiClient = axios.create({
-    baseURL: "http://localhost:8080/api", // 基礎路徑
-    timeout: 5000, // 5秒沒回應就報錯
-    headers: { "Content-Type": "application/json" },
-  });
+```javascript
+import axios from "axios";
 
-  // 請求攔截器：每次發送前自動執行
-  apiClient.interceptors.request.use((config) => {
-    console.log("準備發送請求囉！");
-    // 之後學到 Token 可以在這裡與 localStorage 結合
-    // config.headers.Authorization = 'Bearer ' + token;
-    return config;
-  });
+const apiClient = axios.create({
+  baseURL: "http://localhost:8080/ch2_3/api",
+  timeout: 5000, // 5秒沒回應就報錯
+  headers: { "Content-Type": "application/json" },
+});
 
-  // 使用
-  async function getUser() {
-    try {
-      // 只要寫 /user 就好，不用寫完整網址
-      // 拿到的 res.data 直接就是物件
-      const res = await apiClient.get("/user");
-      console.log(res.data);
-    } catch (err) {
-      console.error(err);
+// 請求攔截器：每次發送前自動執行
+apiClient.interceptors.request.use(
+  (config) => {
+    // 例如：從 localStorage 取出 token 放入 header
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
+    return config;
+  },
+  // 請求發送前的錯誤處理
+  (error) => Promise.reject(error)
+);
+
+// 回應攔截器：接收到回應後自動執行
+apiClient.interceptors.response.use(
+  (response) => {
+    // 接收到回應後，可進行回應的預處理，如
+    // 1: 簡化資料層級，直接回傳 data，這樣前端呼叫時就不用多寫一層 .data
+    // 2: 可以在這裡進行全域的 Log 紀錄或數據統計
+    return response.data;
+  },
+  (error) => {
+    // 統一處理 HTTP 錯誤狀態碼
+    if (error.response) {
+      switch (error.response.status) {
+        case 401:
+          console.error("未授權，請重新登入");
+          // 例如：導向登入頁
+          // window.location.href = '/login.html';
+          break;
+        case 403:
+          console.error("權限不足");
+          break;
+        case 404:
+          console.error("找不到資源");
+          break;
+        case 500:
+          console.error("伺服器內部錯誤");
+          break;
+        default:
+          console.error("發生其他錯誤");
+      }
+    }
+    // 將未捕捉到的錯誤繼續往外傳遞
+    return Promise.reject(error);
   }
-</script>
+);
+
+export default apiClient;
+```
+
+**2. 在主程式中使用 (`index.js`)**
+
+```javascript
+import apiClient from "./api/apiClient.js";
+
+const getUser = async () => {
+  try {
+    // 程式碼變得非常乾淨，不用重複寫網址或處理通用錯誤
+    const res = await apiClient.get("/todo");
+    console.log(res); // 攔截器已預處理，直接回傳 response.data (即 List<Todo>)
+  } catch (err) {
+    // 這裡只需要處理「特定業務邏輯」的錯誤，通用的錯誤已被攔截器處理掉了
+    console.error("取得待辦事項失敗:", err);
+  }
+};
 ```
 
 從下一章開始，我們將全面使用 **Axios** (配合 CDN 引入) 來進行開發。
