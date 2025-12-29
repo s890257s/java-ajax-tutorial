@@ -277,10 +277,11 @@ RESTful 的 URL **不是在描述動作，而是在描述「資源之間的關�
 如果不確定該不該嵌套，問自己三個問題：
 
 1.  **子資源能不能離開父資源獨立存在？**
+    _OrderItem 離開 Order 就沒有意義，要嵌套 ✅。_
 2.  **這個 URL 是在描述關係，還是在描述條件？**
+    _「屬於某人的」是關係，要嵌套 ✅；「是今年的」是條件，不嵌套 ❌，請用 Query String。_
 3.  **如果我只給子資源 ID，語意還完整嗎？**
-
-只要有一題答「不行 / 不完整」，那就很適合用嵌套。
+    _商品 ID 全域唯一，直接 `/products/1` 就能定位，不一定要掛在分類下，不嵌套 ❌。_
 
 > **💡 實作提醒：URL 是語意，不是程式結構**
 >
@@ -384,7 +385,9 @@ GET /api/orders?status=PAID&from=2025-01-01&sort=createdAt&order=desc&page=0&siz
 > **💡 什麼是反模式 (Anti-pattern)？**
 > 反模式是指在軟體工程中，那些看似直覺、被廣泛使用，但實際上會導致維護困難、效能低下或違反標準協定的設計方式。在 RESTful API 的世界裡，避開反模式是為了確保 API 的**一致性**、**可快取性**與**語義化**，讓介面更具備可預測性。
 
-### === 版本控制 ===
+---
+
+### 5. 版本控制
 
 API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 APP 會壞掉。當有「破壞性更新」時，必須升級版本。
 常見做法有兩種：
@@ -395,7 +398,9 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 2.  **Header Versioning**：寫在 HTTP Header 裡 (較隱晦，但 URL 乾淨)。
     - Header: `Accept-version: v1`
 
-### === HTTP 狀態碼 (Status Codes) ===
+---
+
+### 6. HTTP 狀態碼 (Status Codes)
 
 正確使用狀態碼是後端工程師的基本素養。將狀態碼表格化整理如下：
 
@@ -403,59 +408,76 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 
 通常由底層協議自動處理，應用層較少直接操作。
 
-| 代碼    | 定義                | 情境說明                                                  |
-| :------ | :------------------ | :-------------------------------------------------------- |
-| **100** | Continue            | Server 允許你繼續傳送 Body (通常用於大檔案上傳前的確認)。 |
-| **101** | Switching Protocols | 協議切換 (例如 HTTP 升級為 WebSocket)。                   |
+| 代碼    | 定義                | 中文     | 情境說明                                                  |
+| :------ | :------------------ | :------- | :-------------------------------------------------------- |
+| **100** | Continue            | 繼續     | Server 允許你繼續傳送 Body (通常用於大檔案上傳前的確認)。 |
+| **101** | Switching Protocols | 切換協定 | 例如 HTTP 升級為 WebSocket。                              |
 
 #### 2xx (成功 - Success)
 
-| 代碼    | 定義       | 情境說明                                                                                            |
-| :------ | :--------- | :-------------------------------------------------------------------------------------------------- |
-| **200** | OK         | 標準成功回應 (通常用於 GET 查詢、PUT 修改)。                                                        |
-| **201** | Created    | 資源**建立成功** (通常用於 POST)。<br>💡 _建議在 Header 回傳 `Location` 告知新資源位置。_           |
-| **202** | Accepted   | 請求已接受，但**尚未處理完成**。<br>💡 _情境：非同步任務 (如匯出報表)，前端需輪詢 (Polling) 結果。_ |
-| **204** | No Content | 執行成功，但**沒有內容**需回傳。<br>💡 _情境：DELETE 刪除成功，或 PUT 更新成功但不想回傳 Payload。_ |
+| 代碼    | 定義       | 中文     | 情境說明                                                                                              |
+| :------ | :--------- | :------- | :---------------------------------------------------------------------------------------------------- |
+| **200** | OK         | 請求成功 | **通用標準成功回應**，通常用於 GET 查詢、PUT 修改。                                                   |
+| **201** | Created    | 已建立   | **資源建立成功**，通常用於 POST。<br>💡 _建議在 Header 回傳 `Location` 告知新資源位置。_              |
+| **202** | Accepted   | 已接受   | **請求已接受**，但尚未處理完成。<br>💡 _情境：非同步任務 (如匯出報表)，前端需輪詢 (Polling) 結果。_   |
+| **204** | No Content | 無內容   | **執行成功**，但沒有內容需回傳。<br>💡 _情境：DELETE 刪除成功，或 PUT 更新成功，但不想回傳 Payload。_ |
 
 #### 3xx (重導向 - Redirection)
 
-| 代碼    | 定義               | 情境說明                                                                              |
-| :------ | :----------------- | :------------------------------------------------------------------------------------ |
-| **301** | Moved Permanently  | **永久搬家**。<br>💡 _情境：網域更換或 SEO 權重轉移。瀏覽器會快取新網址。_            |
-| **302** | Found              | **暫時搬家 (舊標準)**。<br>⚠️ _注意：可能導致 POST 被瀏覽器改成 GET。_                |
-| **303** | See Other          | 請去另一個地方看結果。<br>💡 _情境：POST 成功後導向 GET 結果頁 (避免 F5 重複送單)。_  |
-| **304** | Not Modified       | **資源未修改** (搭配快取 Header)。<br>💡 _效能關鍵：告訴前端「用你快取的那份就好」。_ |
-| **307** | Temporary Redirect | **暫時搬家 (嚴格版)**。<br>✅ _保證 POST 導向後 HTTP Method 不變。_                   |
-| **308** | Permanent Redirect | **永久搬家 (嚴格版)**。<br>✅ _保證 POST 導向後 HTTP Method 不變。_                   |
+| 代碼    | 定義               | 中文       | 情境說明                                                                                                                                                                                |
+| :------ | :----------------- | :--------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **301** | Moved Permanently  | 永久移動   | **永久性搬家，method 可能被改為 GET**。這個 URL 以後都不用來了，請記住新家。SEO 權重(累積評價)會轉移至新網址。瀏覽器會「無期限」快取新網址，下次連舊網址時會自動跳轉，不再詢問 Server。 |
+| **302** | Found              | 尋找       | **暫時性搬家 (語意模糊)**。資源暫時換地方，但舊網址保留。SEO 權重不轉移。瀏覽器通常不快取。<br>⚠️ _陷阱：雖規範說應維持 Method，但瀏覽器實作常把 POST 改為 GET。_                       |
+| **303** | See Other          | 查看其他   | **明確要求改用 GET 取得結果**。通常用於 Forms POST 提交後，為了避免使用者「F5 重新整理」造成重複送單，而導向到一個「完成頁面」。                                                        |
+| **304** | Not Modified       | 未修改     | **快取驗證**。資源內容沒變，請瀏覽器直接用本機快取 (Status 200) 的那份。                                                                                                                |
+| **307** | Temporary Redirect | 暫時重導向 | **暫時性搬家 (嚴格規範)**。與 302 類似，但明確規範：**不得變更 HTTP Method 與 Body**。<br>✅ _若你在 302 遇到 POST Body 遺失問題，請改用這個(通常用於 307 到另一個 API)。_              |
+| **308** | Permanent Redirect | 永久重導向 | **永久性搬家 (嚴格規範)**。與 301 類似，但明確規範：**不得變更 HTTP Method 與 Body**。<br>✅ _比 301 更現代的選擇，確保轉發請求的完整性。_                                              |
 
-> **📌 [302 vs 307] 特別說明：**
-> 302 在舊版實作中，常導致 POST 請求被瀏覽器改成 GET (資料遺失)。
-> 如果你的 API 是內部轉發 (如 `/api/v1` -> `/api/v2`) 且包含 POST 方法，**請務必使用 307** 以確保 Body 內容不遺失。
+> **📌 3xx 重導向：避坑指南與最佳實踐**
+>
+> **1. 302 vs 307 的差別？**
+> 302 是舊標準，它的模糊定義導致瀏覽器實作不一致，常把 `POST` 全部轉成 `GET`，導致 Form 表單資料遺失。
+> **結論：** 如果你的 API 是內部轉發 (如 `/api/v1` -> `/api/v2`) 且需要保留 POST Body，**請務必使用 307**。
+>
+> **2. 選擇判斷方法**
+>
+> - **Q1：若是「POST 提交表單」後，要導去另一個畫面給使用者察看結果？**
+>   👉 **303 (See Other)**：這是最標準的 PRG (Post-Redirect-Get) 模式，防止使用者 F5 重複送單。
+>   <br>
+> - **Q2：若是「技術性轉發」，且必須保留原本的 POST Body？**
+>   👉 **307 (Temporary Redirect)**：暫時轉發
+>   👉 **308 (Permanent Redirect)**：永久轉發
+>   <br>
+> - **Q3：若是「瀏覽器快取 (Cache)」有關？**
+>   👉 **304 (Not Modified)**：未修改
+>   <br>
+> - **Q4：若只是暫時導一下，不考慮 POST Body 的保留？**
+>   😅 **302 (Found)**：雖然不完美，但它是目前最通用的「暫時搬家」。
 
 #### 4xx (客戶端錯誤 - Client Error)
 
 問題出在「請求方」(前端/使用者)，Server 是正常的。
 
-| 代碼    | 定義               | 情境說明                                                                                             |
-| :------ | :----------------- | :--------------------------------------------------------------------------------------------------- |
-| **400** | Bad Request        | **請求格式錯誤**。<br>💡 _情境：必傳參數漏了、JSON 格式壞掉。_                                       |
-| **401** | Unauthorized       | **未認證 (Who are you?)**。<br>💡 _情境：未登入、Token 過期/無效。_                                  |
-| **403** | Forbidden          | **權限不足 (I know you, but No)**。<br>💡 _情境：一般會員想進後台、試圖存取他人訂單。_               |
-| **404** | Not Found          | **找不到資源**。<br>💡 _情境：ID 不存在、網址打錯。_                                                 |
-| **405** | Method Not Allowed | **方法不支援**。<br>💡 _情境：API 只寫了 GET，你卻用 POST 打進來。_                                  |
-| **409** | Conflict           | **資源衝突**。<br>💡 _情境：註冊已存在的帳號、併發修改 (編輯期間，資料已被他人更新，導致更新失敗)。_ |
-| **429** | Too Many Requests  | **請求過於頻繁**。                                                                                   |
+| 代碼    | 定義               | 中文       | 情境說明                                                                                             |
+| :------ | :----------------- | :--------- | :--------------------------------------------------------------------------------------------------- |
+| **400** | Bad Request        | 錯誤的請求 | **請求格式錯誤**。<br>💡 _情境：必傳參數漏了、JSON 格式壞掉。_                                       |
+| **401** | Unauthorized       | 未授權     | **未認證 (Who are you?)**。<br>💡 _情境：未登入、Token 過期/無效。_                                  |
+| **403** | Forbidden          | 禁止存取   | **權限不足 (I know you, but No)**。<br>💡 _情境：一般會員想進後台、試圖存取他人訂單。_               |
+| **404** | Not Found          | 找不到     | **找不到資源**。<br>💡 _情境：ID 不存在、網址打錯。_                                                 |
+| **405** | Method Not Allowed | 方法不允許 | **方法不支援**。<br>💡 _情境：API 只寫了 GET，你卻用 POST 打進來。_                                  |
+| **409** | Conflict           | 衝突       | **資源衝突**。<br>💡 _情境：註冊已存在的帳號、併發修改 (編輯期間，資料已被他人更新，導致更新失敗)。_ |
+| **429** | Too Many Requests  | 請求過多   | **請求過於頻繁**。                                                                                   |
 
 #### 5xx (伺服器端錯誤 - Server Error)
 
 問題出在「收件人」(後端/伺服器)，前端參數沒錯，是我們掛了。
 
-| 代碼    | 定義                  | 情境說明                                                                       |
-| :------ | :-------------------- | :----------------------------------------------------------------------------- |
-| **500** | Internal Server Error | **伺服器內部錯誤**。<br>💡 _預設錯誤代碼，表示你沒有做好後端錯誤分類_          |
-| **502** | Bad Gateway           | **閘道錯誤**。<br>💡 _情境：Nginx 活著，但後面的 App Server 掛了。_            |
-| **503** | Service Unavailable   | **服務暫時無法使用**。<br>💡 _情境：伺服器過載、停機維護中。_                  |
-| **504** | Gateway Timeout       | **閘道逾時**。<br>💡 _情境：Nginx 等不到後端 App Server 的回應 (程式跑太久)。_ |
+| 代碼    | 定義                  | 中文           | 情境說明                                                                       |
+| :------ | :-------------------- | :------------- | :----------------------------------------------------------------------------- |
+| **500** | Internal Server Error | 伺服器內部錯誤 | **伺服器內部錯誤**。<br>💡 _預設錯誤代碼，表示你沒有做好後端錯誤分類_          |
+| **502** | Bad Gateway           | 錯誤的閘道     | **閘道錯誤**。<br>💡 _情境：Nginx 活著，但後面的 App Server 掛了。_            |
+| **503** | Service Unavailable   | 服務無法使用   | **服務暫時無法使用**。<br>💡 _情境：伺服器過載、停機維護中。_                  |
+| **504** | Gateway Timeout       | 閘道逾時       | **閘道逾時**。<br>💡 _情境：Nginx 等不到後端 App Server 的回應 (程式跑太久)。_ |
 
 > **💡 補充說明：什麼是 Nginx？**
 >
@@ -485,56 +507,192 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 >
 > **一句話總結：** 正向代理隱藏「真正的客戶端」，反向代理隱藏「真正的伺服器」。
 
-### 7. RESTful 六大約束 (Constraints)
+### 7. RESTful 六大約束
 
-要稱為 RESTful，必須符合以下原則 (面試常考)：
+要稱為 RESTful，必須符合以下原則：
 
 1.  **Client-Server**：前後端分離，各司其職。
-2.  **Stateless (無狀態)**：**最重要！** 伺服器不保存 Client 的狀態 (Session)，每次請求都必須包含所有驗證資訊 (如 Token)。這讓伺服器容易擴展 (Scale-out)。
+2.  **Stateless (無狀態)**：**最重要！** 伺服器不保存 Client 的狀態 (Session)，每次請求都必須包含所有驗證資訊 (如 Token)。這讓伺服器容易擴展。
 3.  **Cacheable (可快取)**：回應要標示是否可被瀏覽器或 CDN 快取。
 4.  **Uniform Interface (統一介面)**：URL 命名風格一致、標準的 HTTP 動詞。
-5.  **Layered System (分層系統)**：Client 不知道他連的是正牌 Server 還是中間的 Load Balancer，結構可以隨意抽換。
-6.  **Code on Demand (可選)**：Server 可以傳送 executable code 給 Client (如 JS)，這點現在已經是 Web 標準了。
+5.  **Layered System (分層系統)**：Client 不會知道與之溝通的是真正的 Server，還是中間的 Load Balancer(反向代理伺服器)，結構可以隨意抽換。
+6.  **Code on Demand (可選)**：Server 可以傳送可執行的程式碼給 Client (如 JS)，這點現在已經是 Web 標準了。
+
+> **💡 提醒：**
+> RESTful 是一種架構風格，**並非強制性的硬性標準**。在實務開發中，它僅作為設計建議，不需要完全死板地遵循，應以業務需求與團隊開發效率為首要考量。
 
 ### 8. 其他風格 API 補充
 
 REST 雖然是主流，但不是唯一：
 
 - **GraphQL (Facebook)**：
+
   - **痛點**：REST 常有 "Over-fetching" (拿太多不需要的欄位) 或 "Under-fetching" (要打好幾隻 API 才湊齊資料) 的問題。
   - **特色**：只有一個 Endpoint (`/graphql`)。前端可以**自己寫 Query 語言**決定要拿什麼欄位。
   - **適用**：前端需求變化極快、資料關聯複雜的應用。
+  - **範例**：
+    ```graphql
+    # Client 只要這兩個欄位，Server 就只會回傳這兩個
+    query {
+      user(id: 1) {
+        name
+        email
+      }
+    }
+    ```
+
 - **gRPC (Google)**：
   - **特色**：使用 HTTP/2 + Protobuf (二進制格式)。比 JSON 輕量非常多，速度極快。
   - **適用**：微服務 (Microservices) 之間的內部傳輸，要求極致效能的場景。
+  - **範例**：
+    ```protobuf
+    // 類似 Java class，但編譯後是二進制傳輸
+    message User request {
+      int32 id = 1;
+      string name = 2;
+    }
+    ```
 
 ---
 
-## <a id="CH3-2"></a>[3-2 資料傳輸物件 (DTO) 深度解析](#toc)
+## <a id="CH3-2"></a>[3-2 資料傳輸物件 (DTO) 解析](#toc)
 
 初學者最愛犯的錯誤：**直接把 Entity (資料庫物件) 回傳給前端**。
 
 ### 為什麼不能用 Entity？
 
-1.  **安全性 (Security)**：你的 User Entity 可能有 `password`、`salt` 等欄位。直接回傳等於裸奔。
-2.  **循環參照 (Circular Reference)**：JPA 關聯中常見雙向參照（User <-> Order），轉 JSON 時會無限迴圈直到 `StackOverflowError`。
-3.  **耦合度 (Coupling)**：前端依賴了資料庫的欄位名。如果你改了 DB schema，前端就掛了。
+1.  **安全性 (Security)**：
+    你的 `User` Entity 可能包含 `password`、`salt` 等敏感欄位。若直接回傳 Entity，Jackson 會把所有欄位轉成 JSON，導致密碼外洩。
 
-### DTO (Data Transfer Object)
+    ```json
+    // ❌ 錯誤示範：直接回傳 Entity 導致密碼外洩
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "$2a$10$D8...", // 😱 完蛋了
+      "createdAt": "2023-01-01"
+    }
+    ```
 
-DTO 是一個純粹的 POJO，裡面沒有商業邏輯，只有欄位。它的存在只有一個目的：**定義前後端的資料契約**。
+2.  **循環參照 (Circular Reference)**：
+    JPA 關聯中常見雙向參照（User <-> Order）。
 
-通常我們會分：
+    - User 有 List<Order>
+    - Order 有 User
+    - 轉 JSON 時會變成：`User -> Order -> User -> Order ...` 無限迴圈，直到拋出 `StackOverflowError`。
 
-- **RequestDTO**：前端傳進來的 (只包含允許被修改的欄位)。
-- **ResponseDTO**：回傳給前端的 (只包含前端需要的欄位)。
+3.  **耦合度 (Coupling)**：
+    前端過度依賴資料庫結構。如果你配合業務需求修改了 Table 欄位名稱 (例如 `phone` 改成 `mobile`)，前端程式碼就會壞掉。使用 DTO 可以作為中間緩衝層，保持 API 介面不變。
+
+### DTO (Data Transfer Object) 實戰範例
+
+DTO 是一個純粹的 POJO (Plain Old Java Object)，裡面沒有商業邏輯，只有欄位。它的存在只有一個目的：**定義前後端的資料契約**。
+
+通常我們會將 Request 與 Response 分開設計：
+
+#### 1. RequestDTO (接收前端資料)
+
+只包含「允許被前端修改」的欄位，且通常會加上驗證註解 (`@NotBlank`, `@Email`)。
+
+```java
+@Data
+public class UserCreateRequest {
+
+    @NotBlank(message = "使用者名稱不得為空")
+    private String username;
+
+    @Email(message = "Email 格式不正確")
+    private String email;
+
+    // 密碼在傳輸時存在，但不會存入 ResponseDTO
+    private String password;
+}
+```
+
+#### 2. ResponseDTO (回傳給前端)
+
+只包含「前端顯示需要」的欄位，可以隱藏敏感資訊，或是組合多個欄位的計算結果。
+
+```java
+@Data
+public class UserResponse {
+
+    private Long id;
+    private String username;
+    private String email;
+
+    // 可以在這裡做資料加工，例如將 LocalDateTime 轉成 UNIX Timestamp，或隱藏秒數
+    private String createdDate;
+
+    // ❌ 絕對不放 password
+}
+```
+
+---
+
+### 手寫 Mapper (Manual Mapping)
+
+在介紹自動化工具之前，我們先看看最原始的「手寫轉換」。這是理解所有 Mapping 工具的基礎。
+
+我們通常會寫一個 helper class 或在 Service 層進行轉換：
+
+```java
+@Component
+public class UserMapper {
+
+    // Entity -> DTO
+    public UserResponse toDto(User entity) {
+        if (entity == null) return null;
+
+        UserResponse dto = new UserResponse();
+        dto.setId(entity.getId());
+        dto.setUsername(entity.getUsername());
+        dto.setEmail(entity.getEmail());
+        // 自定義轉換邏輯
+        dto.setCreatedDate(entity.getCreatedAt().toString());
+
+        return dto;
+    }
+
+    // DTO -> Entity
+    public User toEntity(UserCreateRequest request) {
+        if (request == null) return null;
+
+        User entity = new User();
+        entity.setUsername(request.getUsername());
+        entity.setEmail(request.getEmail());
+        entity.setPassword(request.getPassword()); // 實際專案應加密
+
+        return entity;
+    }
+}
+```
+
+**使用方式 (在 Service 中)：**
+
+```java
+@Service
+public class userService {
+
+    @Autowired private UserMapper userMapper;
+    @Autowired private UserRepository userRepository;
+
+    public UserResponse getUser(Long id) {
+        User user = userRepository.findById(id).orElseThrow();
+        // 轉成 DTO 再回傳
+        return userMapper.toDto(user);
+    }
+}
+```
+
+雖然手寫 Mapper **逻辑最清晰**、**除錯最簡單**，但當欄位有 50 個的時候，你會寫 `set` 寫到懷疑人生。這時就是 **BeanUtils** 或 **MapStruct** 登場的時候了。
 
 ---
 
 ## <a id="CH3-3"></a>[3-3 物件轉換神器：BeanUtils vs MapStruct](#toc)
 
 有了 DTO，我們就會面臨一個痛苦的問題：**怎麼把 Entity 轉成 DTO？**
-手寫 `dto.setName(entity.getName())` 寫十個欄位還行，寫一百個會瘋掉。
+手寫 `dto.setName(entity.getName())` 就像上面示範的那樣，寫十個欄位還行，寫一百個會瘋掉。
 
 ### 1. Spring BeanUtils (簡單但有雷)
 
