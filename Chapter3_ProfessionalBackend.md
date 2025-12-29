@@ -27,43 +27,55 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
     - **資源 (Resource)** 是一個抽象概念 (例如：`/api/users/1` 這位使用者)。
     - **表現形式 (Representation)** 則是資源的具體呈現方式。同一個資源，可以有不同的長相：
 
-    ```json
-    // JSON 格式 (最常用)
-    { "id": 1, "name": "Allen", "role": "Admin" }
-    ```
+      ```json
+      // JSON 格式 (最常用)
+      { "id": 1, "name": "Alice", "role": "Admin" }
+      ```
 
-    ```xml
-    <!-- XML 格式 -->
-    <user>
-        <id>1</id>
-        <name>Allen</name>
-        <role>Admin</role>
-    </user>
-    ```
+      ```xml
+      <!-- XML 格式 -->
+      <user>
+          <id>1</id>
+          <name>Alice</name>
+          <role>Admin</role>
+      </user>
+      ```
 
-    ```html
-    <!-- HTML 格式 -->
-    <div>
-      <h1>Allen</h1>
-      <p>Role: Admin</p>
-    </div>
-    ```
+      ```html
+      <!-- HTML 格式 -->
+      <div>
+        <h1>Alice</h1>
+        <p>Role: Admin</p>
+      </div>
+      ```
 
-    - _重點：Server 傳給你的不是「Allen 本人」，而是「Allen 的表現形式」。_
+    - _重點：Server 傳給你的不是「Alice 本人」，而是「Alice 的表現形式」。_
 
 2.  **State (狀態)**
 
-    - 指的是資源在當下的**數據內容**。
+    - 指的是資源在當下的「資料內容」。
     - 接續上面的例子，當你拿到 Representation 時，你就擁有了該資源的 **狀態**：
-      - ID 是 `1`
-      - 名字是 `Allen`
-      - 角色是 `Admin`
-    - 同時也隱含了 **Stateless (無狀態)** 的原則：Server 不會記得「你剛才看過 Allen」。每次請求都是獨立的，你必須自己把狀態帶給 Server (例如 Token)。
+
+      ```javascript
+      /*
+       以下格式表達狀態
+       id 是 1
+       姓名是 Alice
+       角色是 Admin
+       */
+      {
+        "id": 1,
+        "name": "Alice",
+        "role": "Admin"
+      }
+      ```
+
+    - 同時也隱含了 **Stateless (無狀態)** 的原則：Server 不會記得「你剛才看過 Alice」。每次請求都是獨立的，你必須自己把狀態帶給 Server (例如身分識別的 Token)。
 
 3.  **Transfer (轉移)**
 
     - 這是 REST 最容易被忽略，但也最核心的概念。
-    - **定義**：**Client 與 Server 之間，透過 HTTP Request / Response，來回交換 Representation 的過程。**
+    - **定義**：Client 與 Server 之間，透過 HTTP Request / Response，來回交換 Representation 的過程。
 
     REST 強調**系統狀態不是靠 Server 的 Session 維持，而是靠「來回傳遞」逐步推進**。這意味著 Server 沒有記憶，每一次請求都是獨立的。
 
@@ -74,7 +86,7 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
       - Server 回傳 Representation: `{ "id": 123, "status": "CREATED" }`
       - 👉 **Transfer #1**：Client 獲知當前狀態為「已建立」。
     - **② Client：好，那我付款**
-      - Client: `POST /orders/123/pay`
+      - Client: `POST /orders/123/payments`
       - Server 回傳 Representation: `{ "id": 123, "status": "PAID" }`
       - 👉 **Transfer #2**：Client 獲知狀態更新為「已付款」。
 
@@ -86,6 +98,8 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
 **總結：**
 **REST = Client 透過 HTTP，反覆取得資源的表示 (Representation)，逐步更新自己對系統的狀態 (State) 理解。**
 
+---
+
 ### 1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)
 
 在 RESTful 的設計理念中，我們將網路上的事物抽象為 **資源 (Resource)**。而設計 API 時的核心原則就是：「**URL 是名詞，HTTP Method 是動詞**」。
@@ -94,7 +108,12 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
 
 **URL (Uniform Resource Locator)** 就像是網路上的地址，它應該只負責「定位資源」，因此 **只能包含名詞**，不應出現動詞。
 
-- ❌ **錯誤示範 (URL 含動詞)**：`/api/getAllUsers`, `/api/createUser`, `/api/deleteUser?id=1`
+- ❌ **錯誤示範 (URL 含動詞)**：
+
+  - `/api/getAllUsers` (get 為動詞)
+  - `/api/create/user` (create 為動詞、user 為單數)
+  - `/api/users/update?id=1` (update 為動詞)
+
 - ✅ **正確示範 (僅含名詞)**：
   - `/api/users` (代表使用者集合)
   - `/api/users/1` (代表特定使用者資源)
@@ -113,11 +132,26 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
   - **定義**：用請求的 Payload **完整替換** 目標資源 (All or Nothing)。
   - **場景**：更新使用者的「所有」資料 (若某些欄位沒傳，可能會被清空)。
 - **PATCH (部分更新)**
-  - **定義**：對資源進行 **部分修改** (Partial Update)。
+  - **定義**：對資源進行 **部分修改**。
   - **場景**：只修改密碼、只變更狀態 (Active/Inactive)。
 - **DELETE (刪除)**
   - **定義**：請求伺服器刪除指定資源。
   - **場景**：刪除文章、移除我的最愛。
+
+> **📝 備註：所有 HTTP Method 簡介**
+>
+> 除了上述常用的 CRUD 方法外，HTTP 1.1 還定義了其他方法：
+>
+> - **HEAD**
+>   與 GET 完全相同，但**只回傳 Header，不回傳 Body**。常用於檢查資源是否存在或檢查版本 (Last-Modified)。
+> - **OPTIONS**
+>   詢問 Server 對該資源支援哪些 Method。常用於 **CORS (跨來源資源共享)** 的預檢請求 (Preflight Request)。
+> - **TRACE**
+>   回傳 Server 收到的請求內容，用於測試或診斷 (但有安全性風險，通常會關閉)。
+> - **CONNECT**
+>   將連線改為 Tunnel 模式，主要用於 SSL/HTTPS 代理伺服器。
+
+---
 
 ### 2. API 寫法、HTTP 請求與語意
 
@@ -192,25 +226,165 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 > - ✅ **正確解答**：`POST /users/1/orders`
 > - **語意**：對使用者 1 新增一筆訂單資源 (Create Order)。這樣既符合 REST 的名詞規範，也清楚表達了業務含義。
 
-### 3. 進階結構嵌套 (Nesting)
+---
 
-如果資源有「階層關係」，我們可以設計嵌套的 URL。
-例如：「取得 使用者 ID=1 的 所有訂單」
+### 3. 結構嵌套 (Nesting)
 
-- **URL**: `GET /users/1/orders`
-- **URL**: `GET /users/1/orders/5` (取得該使用者的第 5 號訂單)
+RESTful 的 URL **不是在描述動作，而是在描述「資源之間的關係」**。所謂結構嵌套 (Nested Resources)，就是**把子資源掛在父資源之下，用 URL 階層表達「從屬關係」**。
 
-注意：建議嵌套**不要超過兩層**，否則 URL 會變得太長且難以維護。例如 `/users/1/orders/5/items/2` 就太深了，可以改為直接存取 `/orders/5/items/2`。
+#### === 核心概念：URL 就像資料夾 ===
 
-### 4. 查詢條件 (Filtering, Sorting, Pagination)
+把 URL 想像成檔案總管的資料夾結構：
 
-對於複雜的查詢，不要改變 URL 結構，而是使用 **Query String (查詢字串)**。
+- `/users/42/orders` -> 在 `users` 資料夾裡的 `42` 號資料夾裡的 `orders` 資料夾。
+- 語意翻譯：**「42 號使用者的訂單列表」**。
 
-- **過濾 (Filtering)**：`GET /users?role=admin&active=true`
-- **排序 (Sorting)**：`GET /users?sort=age,desc`
-- **分頁 (Pagination)**：`GET /users?page=2&size=10` (取得第 2 頁，每頁 10 筆)
+不是在說「我要做什麼」，而是在說「**這個東西屬於誰**」。
 
-### 5. 版本控制 (Versioning)
+#### === 典型範例 ===
+
+**Type A：一對多 (最常見)**
+重點在於資源的歸屬。
+
+- `GET /users/42/orders` (取得 42 的所有訂單)
+- `POST /users/42/orders` (幫 42 新增一張訂單)
+
+**Type B：強從屬關係 (子資源無法獨立存在)**
+
+- `GET /orders/99/items` (取得 99 號訂單的明細)
+- _Item 離開 Order 就沒有意義，且 `/items/123` 單獨存在很怪，所以非常適合嵌套。_
+
+**Type C：多層嵌套 (Deep Nesting)**
+
+- `GET /companies/3/departments/7/employees`
+- 語意清楚，但 **⚠️ 建議不要超過 2~3 層**，以免 URL 過長難以維護。
+
+#### 什麼時候「不該」嵌套？
+
+**❌ 錯誤 1：子資源其實是獨立概念**
+
+- `POST /users/42/products`
+- 如果 `Product` 是全站共用的商品，不應該隸屬於 User。應該用 `/products`。
+
+**❌ 錯誤 2：把「查詢條件」當成結構**
+
+- `GET /orders/2024/paid`
+- 「2024」和「paid」其實是篩選條件，不是從屬資源。
+- ✅ 正確：`GET /orders?year=2024&status=paid`
+
+#### === 設計判斷法 ===
+
+如果不確定該不該嵌套，問自己三個問題：
+
+1.  **子資源能不能離開父資源獨立存在？**
+2.  **這個 URL 是在描述關係，還是在描述條件？**
+3.  **如果我只給子資源 ID，語意還完整嗎？**
+
+只要有一題答「不行 / 不完整」，那就很適合用嵌套。
+
+> **💡 實作提醒：URL 是語意，不是程式結構**
+>
+> 雖然 URL 是 `/users/42/orders`，但不代表你後端一定要寫一個 `UserOrderController`。
+> 你完全可以用 `OrderController` 接收 `userId` 參數。**URL 是設計給使用者看的語意，不代表綁死後端的實作結構。**
+
+> **💡 深度思考：訂單跟會員一定要嵌套嗎？**
+>
+> 這是初學者常問的問題：「訂單明明有唯一的 Order ID，為什麼還要掛在 User 底下？」
+>
+> **結論：商業語意上「不可」獨立，但技術實作上「可以」獨立。**
+>
+> 1.  **從語意層面來看**：
+>     訂單不會憑空出現，一定歸屬於某個會員。
+>     使用 `/users/{uid}/orders/{oid}` 可以強調這種「從屬關係」，並且自帶「權限範圍」的暗示（只能查該使用者的）。**適合前台 App 使用。**
+>
+> 2.  **從技術層面來看**：
+>     資料庫裡 `order_id` 通常是 Primary Key，全域唯一。所以 `/orders/{oid}` 絕對能在 DB 撈到資料。
+>     **適合後台管理員、客服系統使用**（因為客服不在乎是誰下的，他只要查這張單）。
+>
+> **懶人判斷表**：看你的 API 是給誰用的。
+>
+> - **給會員用 (存取自己)**：✅ 推薦嵌套 `/users/{id}/orders` (語意清楚、權限明確)。
+> - **給管理員 (批次管理)**：❌ 不需要嵌套，直接 `/orders/{id}` 或 `/orders` (方便快速查詢)。
+
+---
+
+### 4. 查詢參數設計 (Filtering, Sorting, Pagination)
+
+在 RESTful API 中，**查詢條件通常放在 URL 的 Query String**，用來描述「**我要找哪些資源、用什麼條件找**」。
+
+#### === 核心概念：Path vs Query ===
+
+REST 的設計哲學將 URL 分為兩個部分，職責必須分清楚：
+
+| 部分      | 用途                     | 範例                              |
+| :-------- | :----------------------- | :-------------------------------- |
+| **Path**  | **定位資源 (Resource)**  | `/api/users` (我要找 User)        |
+| **Query** | **篩選條件 (Condition)** | `?status=active` (我要找啟用中的) |
+
+- ✅ **正確**：`GET /api/users?status=active` (篩選 User 集合)
+- ❌ **錯誤**：`/api/users/active` (active 像是資源的一種？容易混淆)
+
+> **💡 隨堂測驗：如果要找「年齡大於 30 歲」的使用者？**
+>
+> ❌ **錯誤設計**：`/api/users/age/gt/30` (把運算邏輯寫進路徑，雖然看得懂，但不符合 Restful 風格)。
+>
+> ✅ **正確思路**：Query String 才是放條件的地方。雖然 REST 沒有規定運算子怎麼寫，但常見有：
+>
+> - `?ageGt=30` (直白)
+> - `?minAge=30` (語意清楚)
+
+#### === 常見查詢類型 ===
+
+**A. 篩選 (Filtering)**
+最基本款，直接用欄位名稱當 Key。
+
+- `GET /users?role=admin`
+- `GET /products?category=book&inStock=true`
+
+**B. 分頁 (Pagination)**
+**這是 REST 基本技能**，絕對不要一次撈全部資料回傳。
+
+- **Page/Size 模式**：`GET /posts?page=1&size=20` (第 1 頁，每頁 20 筆)
+- **Offset/Limit 模式**：`GET /posts?offset=0&limit=20` (跳過 0 筆，抓 20 筆)
+
+**C. 排序 (Sorting)**
+
+- `GET /users?sort=createdAt,desc`
+- `GET /users?sortBy=createdAt&order=desc` (另一種常見寫法)
+
+**D. 搜尋 (Search / Keyword)**
+通常用於模糊查詢或跨欄位搜索。
+
+- `GET /articles?q=spring`
+- `GET /products?keyword=iphone`
+
+**E. 範圍 (Range)**
+常見於時間、金額。
+
+- `GET /orders?minPrice=1000`
+- `GET /logs?from=2025-01-01&to=2025-01-31`
+
+#### === RESTful 的完整範例 ===
+
+將上述組合起來，一個優雅的 API 呼叫應該長這樣：
+
+```http
+GET /api/orders?status=PAID&from=2025-01-01&sort=createdAt&order=desc&page=0&size=20
+```
+
+> **翻譯白話文：**
+> 「我要查 **Orders (資源)**，條件是 **已付款且 1 月份 (篩選)**，按 **建立時間倒序 (排序)**，給我 **第 1 頁的 20 筆資料 (分頁)**。」
+
+#### === 常見反模式 (Anti-patterns) ===
+
+- ❌ **用 POST 來查詢**：`POST /api/users/search` (除非條件長到 URL 塞不下，否則請用 GET，因為 POST 不能被 Cache)。
+- ❌ **把查詢條件塞進 Path**：`/api/users/age/30` (讓人搞不清 age 是資源還是條件)。
+- ❌ **動詞型 Query**：`?getActive=true` (REST 偏好名詞與狀態，不要寫成程式碼 function 名稱)。
+
+> **💡 什麼是反模式 (Anti-pattern)？**
+> 反模式是指在軟體工程中，那些看似直覺、被廣泛使用，但實際上會導致維護困難、效能低下或違反標準協定的設計方式。在 RESTful API 的世界裡，避開反模式是為了確保 API 的**一致性**、**可快取性**與**語義化**，讓介面更具備可預測性。
+
+### === 版本控制 ===
 
 API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 APP 會壞掉。當有「破壞性更新」時，必須升級版本。
 常見做法有兩種：
@@ -221,25 +395,95 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 2.  **Header Versioning**：寫在 HTTP Header 裡 (較隱晦，但 URL 乾淨)。
     - Header: `Accept-version: v1`
 
-### 6. HTTP 狀態碼 (Status Codes)
+### === HTTP 狀態碼 (Status Codes) ===
 
-正確使用狀態碼，可以讓前端知道發生什麼事，而不是永遠回傳 200 然後在 Body 裡寫 "Error"。
+正確使用狀態碼是後端工程師的基本素養。將狀態碼表格化整理如下：
 
-- **2xx (成功)**
-  - `200 OK`：請求成功 (GET, PUT)。
-  - `201 Created`：新增成功 (POST)。
-  - `204 No Content`：成功但沒內容回傳 (DELETE 常用)。
-- **3xx (重導向)**
-  - `301 Moved Permanently`：永久搬家。
-  - `304 Not Modified`：快取未過期，不用重新下載。
-- **4xx (客戶端錯誤 - 你傳錯了)**
-  - `400 Bad Request`：參數錯誤、格式不對。
-  - `401 Unauthorized`：未登入、沒 Token。
-  - `403 Forbidden`：有登入但沒權限 (例如一般會員想刪除管理員)。
-  - `404 Not Found`：找不到資源。
-  - `405 Method Not Allowed`：這裡不支援 POST 請求。
-- **5xx (伺服器錯誤 - 我壞了)**
-  - `500 Internal Server Error`：程式爆了 (NullPointerException, DB 連不上)。
+#### 1xx (資訊回應 - Information)
+
+通常由底層協議自動處理，應用層較少直接操作。
+
+| 代碼    | 定義                | 情境說明                                                  |
+| :------ | :------------------ | :-------------------------------------------------------- |
+| **100** | Continue            | Server 允許你繼續傳送 Body (通常用於大檔案上傳前的確認)。 |
+| **101** | Switching Protocols | 協議切換 (例如 HTTP 升級為 WebSocket)。                   |
+
+#### 2xx (成功 - Success)
+
+| 代碼    | 定義       | 情境說明                                                                                            |
+| :------ | :--------- | :-------------------------------------------------------------------------------------------------- |
+| **200** | OK         | 標準成功回應 (通常用於 GET 查詢、PUT 修改)。                                                        |
+| **201** | Created    | 資源**建立成功** (通常用於 POST)。<br>💡 _建議在 Header 回傳 `Location` 告知新資源位置。_           |
+| **202** | Accepted   | 請求已接受，但**尚未處理完成**。<br>💡 _情境：非同步任務 (如匯出報表)，前端需輪詢 (Polling) 結果。_ |
+| **204** | No Content | 執行成功，但**沒有內容**需回傳。<br>💡 _情境：DELETE 刪除成功，或 PUT 更新成功但不想回傳 Payload。_ |
+
+#### 3xx (重導向 - Redirection)
+
+| 代碼    | 定義               | 情境說明                                                                              |
+| :------ | :----------------- | :------------------------------------------------------------------------------------ |
+| **301** | Moved Permanently  | **永久搬家**。<br>💡 _情境：網域更換或 SEO 權重轉移。瀏覽器會快取新網址。_            |
+| **302** | Found              | **暫時搬家 (舊標準)**。<br>⚠️ _注意：可能導致 POST 被瀏覽器改成 GET。_                |
+| **303** | See Other          | 請去另一個地方看結果。<br>💡 _情境：POST 成功後導向 GET 結果頁 (避免 F5 重複送單)。_  |
+| **304** | Not Modified       | **資源未修改** (搭配快取 Header)。<br>💡 _效能關鍵：告訴前端「用你快取的那份就好」。_ |
+| **307** | Temporary Redirect | **暫時搬家 (嚴格版)**。<br>✅ _保證 POST 導向後 HTTP Method 不變。_                   |
+| **308** | Permanent Redirect | **永久搬家 (嚴格版)**。<br>✅ _保證 POST 導向後 HTTP Method 不變。_                   |
+
+> **📌 [302 vs 307] 特別說明：**
+> 302 在舊版實作中，常導致 POST 請求被瀏覽器改成 GET (資料遺失)。
+> 如果你的 API 是內部轉發 (如 `/api/v1` -> `/api/v2`) 且包含 POST 方法，**請務必使用 307** 以確保 Body 內容不遺失。
+
+#### 4xx (客戶端錯誤 - Client Error)
+
+問題出在「請求方」(前端/使用者)，Server 是正常的。
+
+| 代碼    | 定義               | 情境說明                                                                                             |
+| :------ | :----------------- | :--------------------------------------------------------------------------------------------------- |
+| **400** | Bad Request        | **請求格式錯誤**。<br>💡 _情境：必傳參數漏了、JSON 格式壞掉。_                                       |
+| **401** | Unauthorized       | **未認證 (Who are you?)**。<br>💡 _情境：未登入、Token 過期/無效。_                                  |
+| **403** | Forbidden          | **權限不足 (I know you, but No)**。<br>💡 _情境：一般會員想進後台、試圖存取他人訂單。_               |
+| **404** | Not Found          | **找不到資源**。<br>💡 _情境：ID 不存在、網址打錯。_                                                 |
+| **405** | Method Not Allowed | **方法不支援**。<br>💡 _情境：API 只寫了 GET，你卻用 POST 打進來。_                                  |
+| **409** | Conflict           | **資源衝突**。<br>💡 _情境：註冊已存在的帳號、併發修改 (編輯期間，資料已被他人更新，導致更新失敗)。_ |
+| **429** | Too Many Requests  | **請求過於頻繁**。                                                                                   |
+
+#### 5xx (伺服器端錯誤 - Server Error)
+
+問題出在「收件人」(後端/伺服器)，前端參數沒錯，是我們掛了。
+
+| 代碼    | 定義                  | 情境說明                                                                       |
+| :------ | :-------------------- | :----------------------------------------------------------------------------- |
+| **500** | Internal Server Error | **伺服器內部錯誤**。<br>💡 _預設錯誤代碼，表示你沒有做好後端錯誤分類_          |
+| **502** | Bad Gateway           | **閘道錯誤**。<br>💡 _情境：Nginx 活著，但後面的 App Server 掛了。_            |
+| **503** | Service Unavailable   | **服務暫時無法使用**。<br>💡 _情境：伺服器過載、停機維護中。_                  |
+| **504** | Gateway Timeout       | **閘道逾時**。<br>💡 _情境：Nginx 等不到後端 App Server 的回應 (程式跑太久)。_ |
+
+> **💡 補充說明：什麼是 Nginx？**
+>
+> Nginx 是一款高效能的 **Web 伺服器 (Web Server)** 與 **反向代理伺服器 (Reverse Proxy)**。在現代後端架構中，它通常扮演「守門員」的角色：
+>
+> 1.  **反向代理**：隱藏後端真實伺服器的 IP，統一由 Nginx 接收請求再轉發，提升安全性。
+> 2.  **負載平衡 (Load Balancing)**：將大量流量平均分配給多台後端伺服器，避免單一伺服器過載。
+> 3.  **靜態資源處理**：直接處理圖片、CSS、JS 等檔案，減輕後端程式（如 Java/Python）的負擔。
+> 4.  **SSL 終止**：統一在 Nginx 層處理 HTTPS 加密連線，後端伺服器只需跑簡單的 HTTP。
+>
+> 當你在狀態碼看到 **502 (Bad Gateway)** 或 **504 (Gateway Timeout)** 時，通常就是 Nginx 這個「中間人」連不到後端程式，或是等後端程式跑太久而逾時。
+
+> **💡 補充說明：正向代理 vs 反向代理**
+>
+> 很多人會搞混這兩個概念，簡單來說，區別在於「代理誰」：
+>
+> 1.  **正向代理 (Forward Proxy)**：
+>
+>     - **代理對象**：客戶端 (Client)。
+>     - **情境**：你要「翻牆」看外部網站，或是公司內部電腦透過一台 Proxy 上網。
+>     - **作用**：隱藏客戶端真實 IP、繞過存取限制。伺服器只知道代理伺服器來找它，不知道背後是誰。
+>
+> 2.  **反向代理 (Reverse Proxy)**：
+>     - **代理對象**：伺服器端 (Server)。
+>     - **情境**：Nginx 擋在多台 App Server 前面。
+>     - **作用**：隱藏伺服器真實 IP、負載平衡、SSL 憑證管理。客戶端只知道 Nginx，不知道背後到底是哪台伺服器在處理。
+>
+> **一句話總結：** 正向代理隱藏「真正的客戶端」，反向代理隱藏「真正的伺服器」。
 
 ### 7. RESTful 六大約束 (Constraints)
 
