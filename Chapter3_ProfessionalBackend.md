@@ -19,7 +19,72 @@
 ## <a id="CH3-1"></a>[3-1 什麼是 RESTful API？](#toc)
 
 後端工程師最常聽到的詞就是 **RESTful API**。它不是一種程式語言，也不是一種協定，而是一種 **「軟體架構風格」 (Architectural Style)**。
-REST 全名 **Representational State Transfer** (表現層狀態轉移)。聽起來很抽象，簡單來說就是：**把這個世界看作是一堆「資源 (Resource)」，我們透過 HTTP 動詞來對這些資源進行操作。**
+
+REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三個字拆開來解釋，就能理解它的精髓：
+
+1.  **Representational (表現層 / 表現形式)**
+
+    - **資源 (Resource)** 是一個抽象概念 (例如：`/api/users/1` 這位使用者)。
+    - **表現形式 (Representation)** 則是資源的具體呈現方式。同一個資源，可以有不同的長相：
+
+    ```json
+    // JSON 格式 (最常用)
+    { "id": 1, "name": "Allen", "role": "Admin" }
+    ```
+
+    ```xml
+    <!-- XML 格式 -->
+    <user>
+        <id>1</id>
+        <name>Allen</name>
+        <role>Admin</role>
+    </user>
+    ```
+
+    ```html
+    <!-- HTML 格式 -->
+    <div>
+      <h1>Allen</h1>
+      <p>Role: Admin</p>
+    </div>
+    ```
+
+    - _重點：Server 傳給你的不是「Allen 本人」，而是「Allen 的表現形式」。_
+
+2.  **State (狀態)**
+
+    - 指的是資源在當下的**數據內容**。
+    - 接續上面的例子，當你拿到 Representation 時，你就擁有了該資源的 **狀態**：
+      - ID 是 `1`
+      - 名字是 `Allen`
+      - 角色是 `Admin`
+    - 同時也隱含了 **Stateless (無狀態)** 的原則：Server 不會記得「你剛才看過 Allen」。每次請求都是獨立的，你必須自己把狀態帶給 Server (例如 Token)。
+
+3.  **Transfer (轉移)**
+
+    - 這是 REST 最容易被忽略，但也最核心的概念。
+    - **定義**：**Client 與 Server 之間，透過 HTTP Request / Response，來回交換 Representation 的過程。**
+
+    REST 強調**系統狀態不是靠 Server 的 Session 維持，而是靠「來回傳遞」逐步推進**。這意味著 Server 沒有記憶，每一次請求都是獨立的。
+
+    **舉個「訂單流程」的例子：**
+
+    - **① Client：我要看看訂單**
+      - Client: `GET /orders/123`
+      - Server 回傳 Representation: `{ "id": 123, "status": "CREATED" }`
+      - 👉 **Transfer #1**：Client 獲知當前狀態為「已建立」。
+    - **② Client：好，那我付款**
+      - Client: `POST /orders/123/pay`
+      - Server 回傳 Representation: `{ "id": 123, "status": "PAID" }`
+      - 👉 **Transfer #2**：Client 獲知狀態更新為「已付款」。
+
+    **為什麼這樣設計？**
+
+    - **可擴充 (Scalable)**：因為 Server 不用記住「你走到哪一步」，所以請求可以由任意一台 Server 處理。
+    - **可快取 (Cacheable)**：因為是純粹的資源傳遞，GET 請求很容易被 CDN 快取。
+
+**總結：**
+**REST = Client 透過 HTTP，反覆取得資源的表示 (Representation)，逐步更新自己對系統的狀態 (State) 理解。**
 
 ### 1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)
 
@@ -95,17 +160,20 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 > 這是 HTTP 規範中的術語，意思是：「**對同一筆資料進行一次亦或多次操作，伺服器的最終狀態應該是相同的**」。
 >
 > **2. 為什麼這很重要？**
+>
 > - **決定能否「安全重試 (Retry)」**：這是實務上最重要的用途。當 Client 發出請求但因網路斷線沒收到回應時：
 >   - 若是 **冪等** 操作 (如 `PUT`, `DELETE`)：Client 可以放心地自動重試，不用擔心副作用 (例如重複扣款)。
 >   - 若 **非冪等** 操作 (如 `POST`)：絕對不能隨便自動重試，否則可能會造成「重複下單」或「重複建立資料」的災難。
 > - **快取機制 (Caching)**：CDN 或瀏覽器只敢對冪等且安全的方法 (如 `GET`) 做快取。
 >
 > **3. 範例對照**
+>
 > - ✅ **冪等 (`DELETE /users/1`)**：第一次請求刪除成功；第二次請求雖會回傳 404 (Not Found)，但資料庫「沒有該使用者」的**狀態**維持不變。
 > - ❌ **非冪等 (`POST /users`)**：每次請求都會「新增」一筆全新的資料 (Id 1, Id 2, ...)，改變了伺服器的狀態。
 >
-> **4. 常見面試題：為什麼 PATCH 不是冪等？**
+> **4. 為什麼 PATCH 不是冪等？**
 > 雖然只是改欄位，看起來很像冪等，但 HTTP 協定允許 PATCH 包含「操作指令」而不僅是數據。
+>
 > - **場景 A (像冪等)**：`{ "email": "new@example.com" }` -> 重試 N 次結果都一樣 (Email 都是新的)。
 > - **場景 B (非冪等)**：`{ "operation": "add", "value": 100 }` (如增加餘額) -> 重試 N 次會導致餘額重複增加。
 >
@@ -114,6 +182,7 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 > **💡 思考練習：該怎麼為「結帳 (Checkout)」API 命名？**
 >
 > 假設你要設計一個 API，讓會員 ID=1 進行購物車結帳付款。直覺上你可能會想用動詞：
+>
 > - ❌ **直覺想法**：`POST /users/1/pay` 或 `POST /checkout`
 > - **問題點**：REST 風格不喜歡動詞出現在 URL。
 >
@@ -122,8 +191,6 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 >
 > - ✅ **正確解答**：`POST /users/1/orders`
 > - **語意**：對使用者 1 新增一筆訂單資源 (Create Order)。這樣既符合 REST 的名詞規範，也清楚表達了業務含義。
-
-
 
 ### 3. 進階結構嵌套 (Nesting)
 
