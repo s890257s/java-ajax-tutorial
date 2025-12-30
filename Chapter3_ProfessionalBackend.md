@@ -515,7 +515,7 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 2.  **Stateless (無狀態)**：**最重要！** 伺服器不保存 Client 的狀態 (Session)，每次請求都必須包含所有驗證資訊 (如 Token)。這讓伺服器容易擴展。
 3.  **Cacheable (可快取)**：回應要標示是否可被瀏覽器或 CDN 快取。
 4.  **Uniform Interface (統一介面)**：URL 命名風格一致、標準的 HTTP 動詞。
-5.  **Layered System (分層系統)**：Client 不會知道與之溝通的是真正的 Server，還是中間的 Load Balancer(反向代理伺服器)，結構可以隨意抽換。
+5.  **Layered System (分層系統)**：Client 不會知道溝通的目標是真正的 Server，還是中間的 Load Balancer(反向代理伺服器)，結構可以隨意抽換。
 6.  **Code on Demand (可選)**：Server 可以傳送可執行的程式碼給 Client (如 JS)，這點現在已經是 Web 標準了。
 
 > **💡 提醒：**
@@ -562,7 +562,7 @@ REST 雖然是主流，但不是唯一：
 ### 為什麼不能用 Entity？
 
 1.  **安全性 (Security)**：
-    你的 `User` Entity 可能包含 `password`、`salt` 等敏感欄位。若直接回傳 Entity，Jackson 會把所有欄位轉成 JSON，導致密碼外洩。
+    你的 `User` Entity 可能包含 `password`、`salt` 等敏感欄位。若直接回傳 Entity，Jackson 會把所有欄位轉成 JSON，導致密碼或個資外洩。
 
     ```json
     // ❌ 錯誤示範：直接回傳 Entity 導致密碼外洩
@@ -685,7 +685,7 @@ public class userService {
 }
 ```
 
-雖然手寫 Mapper **逻辑最清晰**、**除錯最簡單**，但當欄位有 50 個的時候，你會寫 `set` 寫到懷疑人生。這時就是 **BeanUtils** 或 **MapStruct** 登場的時候了。
+雖然手寫 Mapper **邏輯清晰**、**除錯簡單**，但當欄位有 50 個的時候，你會寫 `set` 寫到懷疑人生。這時就是 **BeanUtils** 或 **MapStruct** 登場的時候了。
 
 ---
 
@@ -711,54 +711,128 @@ BeanUtils.copyProperties(userEntity, userDto);
   - **除錯困難**：欄位填錯名字不會報錯，只會變成 null。
   - **深拷貝問題**：對於 List 或巢狀物件處理很弱。
 
-### 2. MapStruct (業界標準，強烈推薦)
+### 2. MapStruct (推薦)
 
-MapStruct 是一個 **Annotation Processor**。它會在 **編譯時期 (Compile Time)** 自動幫你生成「手寫版」的轉換程式碼。效能跟手寫一模一樣快！
+MapStruct 是一個 **Annotation Processor**，是目前業界最推薦的 Java Bean Mapping 工具。它與 BeanUtils 最大的區別在於：
+
+1.  **編譯時期 (Compile Time) 生成程式碼**：它不是靠反射 (Reflection) 在執行期間猜測，而是像你手寫一樣，直接在編譯時幫你寫好 `setXxx(getXxx())` 的程式碼。
+2.  **效能極致**：因為是純 Getter/Setter，速度跟手寫一模一樣，比 BeanUtils 快上數十倍。
+3.  **除錯容易**：如果欄位名稱對不上，編譯直接報錯，不會等到 Runtime 才噴 NullPointerException。生成的程式碼也讀得懂。
 
 #### 步驟一：引入依賴 (Maven)
 
+⚠️ **注意：如果你同時使用 Lombok，必須特別注意 `annotationProcessorPaths` 的順序！** Lombok 必須先處理，MapStruct 才能讀到 Getter/Setter。
+
 ```xml
-<dependency>
-    <groupId>org.mapstruct</groupId>
-    <artifactId>mapstruct</artifactId>
-    <version>1.5.5.Final</version>
-</dependency>
-<!-- 處理器放在 build plugin 或 annotationProcessorPaths -->
+<properties>
+    <org.mapstruct.version>1.5.5.Final</org.mapstruct.version>
+    <org.projectlombok.version>1.18.30</org.projectlombok.version>
+</properties>
+
+<dependencies>
+    <dependency>
+        <groupId>org.mapstruct</groupId>
+        <artifactId>mapstruct</artifactId>
+        <version>${org.mapstruct.version}</version>
+    </dependency>
+    <!-- Lombok 依賴通常已經有了 -->
+</dependencies>
+
+<build>
+    <plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <version>3.8.1</version>
+            <configuration>
+                <source>17</source>
+                <target>17</target>
+                <annotationProcessorPaths>
+                    <!-- 1. 必須把 Lombok 放在前面 -->
+                    <path>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok</artifactId>
+                        <version>${org.projectlombok.version}</version>
+                    </path>
+                    <!-- 2. Lombok 與 MapStruct 的黏合劑 (解決 Builder 模式衝突) -->
+                    <path>
+                        <groupId>org.projectlombok</groupId>
+                        <artifactId>lombok-mapstruct-binding</artifactId>
+                        <version>0.2.0</version>
+                    </path>
+                    <!-- 3. 最後才是 MapStruct -->
+                    <path>
+                        <groupId>org.mapstruct</groupId>
+                        <artifactId>mapstruct-processor</artifactId>
+                        <version>${org.mapstruct.version}</version>
+                    </path>
+                </annotationProcessorPaths>
+            </configuration>
+        </plugin>
+    </plugins>
+</build>
 ```
 
-#### 步驟二：定義介面 (Mapper)
+#### 步驟二：定義介面 (Mapper Interface)
+
+你只需要定義 Interface，實作類別會由 MapStruct 自動產生 (通常叫 `UserMapperImpl`)。
 
 ```java
-@Mapper(componentModel = "spring") // 讓它自動變成 Spring Bean
+@Mapper(componentModel = "spring") // 重要：加上這行，MapStruct 會自動加上 @Component，讓你能在 Service 注入
 public interface UserMapper {
 
-    // 基本轉換：欄位名一樣自動對應
+    // 1. Entity -> DTO
+    // 只要欄位名稱一樣，會自動對應。也能自動轉型 (如 int -> String, Date -> String)
     UserDto toDto(User entity);
 
-    // 反向轉換
-    User toEntity(UserDto dto);
+    // 2. DTO -> Entity
+    User toEntity(UserCreateRequest dto);
 
-    // List 轉換：它會自動跑迴圈呼叫上面的 toDto
+    // 3. List 轉換
+    // MapStruct 會自動產生迴圈，呼叫上面的單體轉換方法
     List<UserDto> toDtoList(List<User> list);
 }
 ```
 
-#### 步驟三：處理欄位名稱不一致 (`@Mapping`)
+#### 步驟三：進階對應 (`@Mapping`)
+
+當欄位名稱不同，或是需要特定邏輯時：
 
 ```java
-@Mapper(componentModel = "spring")
+// unmappedTargetPolicy = ReportingPolicy.IGNORE : 忽略那些沒對應到的欄位警告 (讓 Console 乾淨點)
+@Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface OrderMapper {
 
-    @Mapping(source = "createdDate", target = "orderDate") // 來源 -> 目標
-    @Mapping(source = "user.name", target = "customerName") // 甚至可以鑽進去拿屬性
-    @Mapping(target = "internalCode", ignore = true) // 忽略不轉
+    @Mapping(source = "createdDate", target = "orderDate", dateFormat = "yyyy-MM-dd") // 1. 格式化日期
+    @Mapping(source = "user.name", target = "customerName") // 2. 巢狀取值 (Deep Mapping)
+    @Mapping(target = "internalCode", ignore = true)        // 3. 忽略特定目標欄位
+    @Mapping(target = "statusLabel", expression = "java(mapStatus(order.getStatus()))") // 4. 使用 Java 表達式 (雖然強大但建議少用，改用下面的 default method)
     OrderDto toDto(Order order);
+
+    // 可以在 Interface 裡寫 default method 提供簡單邏輯，MapStruct 會自動引用
+    default String mapStatus(Integer status) {
+        return status != null && status == 1 ? "Paid" : "Unpaid";
+    }
 }
 ```
 
-#### 步驟四：自定義邏輯 (`@AfterMapping`)
+#### 步驟四：更新現有物件 (`@MappingTarget`)
 
-如果有些邏輯無法直接對應（例如把 `firstName` + `lastName` 變成 `fullName`），可以用 Java 寫。
+這是 **PUT (Update)** 操作時的神器。你需要把 DTO 的新值蓋掉 Entity 的舊值，但不想 `new` 一個新的 Entity (因為要保留 ID 和 JPA 狀態)。
+
+```java
+@Mapper(componentModel = "spring")
+public interface UserMapper {
+
+    // 把 dto 的內容，更新到「現有的」entity 物件中 (void 回傳即可)
+    // 只有 dto 非 null 的欄位會被複製過去 (需配合 NullValuePropertyMappingStrategy)
+    void updateEntity(UserUpdateRequest dto, @MappingTarget User entity);
+}
+```
+
+#### 步驟五：複雜邏輯 (`@AfterMapping`)
+
+如果有更複雜無法用設定完成的邏輯 (例如欄位依賴)，可以用 abstract class 或是 `@AfterMapping`。
 
 ```java
 @Mapper(componentModel = "spring")
@@ -767,60 +841,284 @@ public abstract class UserMapper {
     // 必須宣告成 abstract class 才能寫實作
     public abstract UserDto toDto(User entity);
 
-    @AfterMapping // MapStruct 轉完欄位後，會自動呼叫這個方法
+    // 這個方法會在 toDto 主邏輯跑完後，自動被呼叫
+    @AfterMapping
     protected void afterToDto(User entity, @MappingTarget UserDto dto) {
-        dto.setFullName(entity.getFirstName() + " " + entity.getLastName());
-
-        if (entity.getStatus() == 1) {
-            dto.setStatusLabel("啟用中");
-        } else {
-            dto.setStatusLabel("停用");
+        // Ex: 只有在某些條件下才設定敏感資訊
+        if (entity.getAge() >= 18) {
+            dto.setIsAdult(true);
         }
+
+        // Ex: 組合欄位
+        dto.setFullName(entity.getFirstName() + " " + entity.getLastName());
     }
+}
+```
+
+#### 💡 常見問題與除錯
+
+1.  **編譯失敗，找不到 MapperImpl？**
+    - 檢查 `pom.xml` 的 `maven-compiler-plugin` 設定。Lombok 必須在 MapStruct **之前**。
+    - 如果你用 IDE (如 IntelliJ)，有時需 Enable Annotation Processing。
+2.  **DTO 加了 `@Data` (Lombok) 卻有些欄位沒值？**
+    - MapStruct 預設用 Setter 寫入。確保你的 Lombok `@Data` 有正常運作。
+    - 如果是 Builder 模式 (`@Builder`)，記得加 `lombok-mapstruct-binding` 依賴。
+3.  **怎麼看它到底轉了什麼？**
+    - MapStruct 是生成原始碼。去專案的 `/target/generated-sources/annotations/` 資料夾下，直接點開 `UserMapperImpl.java` 來看，一切真相大白。
+
+---
+
+## <a id="CH3-4"></a>[3-4 接收與回應資料的十八般武藝 (Frontend & Backend)](#toc)
+
+後端 Controller 要怎麼接前端丟過來的東西？這取決於 HTTP Header 中的 `Content-Type`。我們來看看常見的五種情境，並附上 **Frontend (Axios)** 與 **Backend (Spring Boot)** 的對照寫法。
+
+### 1. JSON 資料 (`application/json`)
+
+這是現代 Ajax 最標準的傳輸方式。
+
+- **前端**：傳送 JS 物件，axios 會自動轉為 JSON 字串。
+- **後端**：使用 `@RequestBody` 接收，Spring 會自動反序列化為 Java Bean。
+
+#### Frontend (Axios)
+
+```javascript
+// axios 預設 Content-Type 就是 application/json
+axios.post("/api/products", {
+  name: "iPhone 15",
+  price: 29900,
+  tags: ["Apple", "Mobile"],
+});
+```
+
+#### Backend (Spring Boot)
+
+```java
+@PostMapping("/api/products")
+public ResponseEntity<Product> create(@RequestBody ProductDto dto) {
+    // dto.getName() -> "iPhone 15"
+    // dto.getTags() -> List<String>
+    return ResponseEntity.ok(productService.save(dto));
 }
 ```
 
 ---
 
-## <a id="CH3-4"></a>[3-4 接收資料的十八般武藝](#toc)
+### 2. URL 參數 (`Path Variables` & `Query Parameters`)
 
-後端 Controller 要怎麼接前端丟過來的東西？主要看 `Content-Type`。
+這通常用於 `GET` 請求，或是刪除/修改特定 ID 的資源。
 
-### 1. JSON (`application/json`) -> `@RequestBody`
+#### A. 路徑參數 (Path Variable)
 
-這是 Ajax 最常用的方式。前端送 JSON 物件，後端用 Entity 或 DTO 接。
+用來識別特定資源 (ex: ID)。
+
+- **Frontend**: `` `/api/users/${id}` ``
+- **Backend**: `@PathVariable`
+
+```javascript
+// 前端
+const userId = 101;
+axios.get(`/api/users/${userId}`);
+```
 
 ```java
-@PostMapping("/api/products")
-public Product create(@RequestBody ProductDto dto) {
-    // Spring 會把 JSON 字串反序列化成 Java 物件
-    return productService.save(dto);
+// 後端
+@GetMapping("/api/users/{id}")
+public UserDto getUser(@PathVariable Long id) {
+    return userService.findById(id);
 }
 ```
 
-### 2. 表單資料 (`application/x-www-form-urlencoded` 或 `multipart/form-data`) -> `@ModelAttribute`
+#### B. 查詢參數 (Query String)
 
-如果你前端是用 `<form>` 傳統提交，或者 AJAX 用 `FormData` 物件（通常為了上傳檔案），就要用這個。
+用來篩選、搜尋或分頁。
 
-- 注意：這裡**不能**加 `@RequestBody`。
-- `@ModelAttribute` 可以省略不寫。
+- **Frontend**: 使用 `params` 物件。
+- **Backend**: `@RequestParam`
+
+```javascript
+// 前端 -> 實際發出: /api/orders?status=PAID&page=1
+axios.get("/api/orders", {
+  params: {
+    status: "PAID",
+    page: 1,
+  },
+});
+```
 
 ```java
-// 前端: const formData = new FormData(); formData.append("name", "iPad");
+// 後端 - 寫法 1：逐個接收
+@GetMapping("/api/orders")
+public List<OrderDto> getOrders(
+    @RequestParam String status,
+    @RequestParam(defaultValue = "1") int page
+) {
+    // ...
+}
+
+// 後端 - 寫法 2：用 DTO 一次接完 (@ModelAttribute) (推薦)
+// 只要 DTO 屬性名稱跟 Query String 對上，就會自動裝入
+@GetMapping("/api/orders/advanced")
+public List<OrderDto> getOrders(@ModelAttribute OrderSearchQuery query) {
+    // query.getStatus(), query.getPage()
+    return orderService.search(query);
+}
+```
+
+---
+
+### 3. 表單資料 (`application/x-www-form-urlencoded`)
+
+這主要有兩種場景：
+
+1.  傳統 `<form>` 提交。
+2.  串接舊式 API (非 JSON 格式)。
+
+- **前端**：使用 `URLSearchParams`。
+- **後端**：使用 `@RequestParam` 或 `@ModelAttribute` (❌ **千萬別加 @RequestBody**)。
+
+#### Frontend (Axios)
+
+```javascript
+// 必須用 URLSearchParams，axios 才會送出 form-urlencoded 格式
+const params = new URLSearchParams();
+params.append("username", "allen");
+params.append("password", "123456");
+
+axios.post("/api/login", params);
+```
+
+#### Backend (Spring Boot)
+
+```java
+@PostMapping("/api/login")
+public String login(
+    @RequestParam String username, // 也可以用 String password
+    LoginRequest request           // 或直接用物件接 (省略 @ModelAttribute)
+) {
+    // request.getUsername() -> "allen"
+    return "Login Success";
+}
+```
+
+---
+
+### 4. 檔案上傳 (`multipart/form-data`)
+
+這也是 Ajax 中較為特殊的情境，必須使用 `FormData` 物件。
+
+- **前端**：使用 `FormData` 物件。建立後 `append` 檔案。
+- **後端**：使用 `MultipartFile` 接收檔案。
+
+#### Frontend (Axios)
+
+```javascript
+/* HTML: <input type="file" id="fileInput"> */
+const fileInput = document.getElementById("fileInput");
+const file = fileInput.files[0];
+
+const formData = new FormData();
+formData.append("file", file);
+formData.append("description", "My Avatar");
+
+axios.post("/api/upload", formData, {
+  headers: {
+    "Content-Type": "multipart/form-data",
+    // 其實 axios 偵測到 FormData 會自動加這個 header 並附上 boundary，但明確寫出來是好習慣。
+  },
+});
+```
+
+#### Backend (Spring Boot)
+
+```java
 @PostMapping("/api/upload")
-public String upload(@ModelAttribute ProductDto dto) {
-    // Spring 會依照參數名稱 (name, price) 去 setter 塞入值
-    return "ok";
+public String upload(
+    @RequestParam("file") MultipartFile file,
+    @RequestParam("description") String description
+) throws IOException {
+
+    // 1. 檢查是否為空
+    if (file.isEmpty()) throw new RuntimeException("檔案不能為空");
+
+    // 2. 存檔 (範例存到 C:/uploads)
+    File dest = new File("C:/uploads/" + file.getOriginalFilename());
+    if (!dest.getParentFile().exists()) {
+        dest.getParentFile().mkdirs(); // 自動建立資料夾
+    }
+    file.transferTo(dest); // 寫入磁碟
+
+    return "Upload Success";
 }
 ```
 
-### 3. 其他常見格式 (補充)
+---
 
-- **URL 路徑參數**: `@PathVariable` (如 `/users/123`)
-- **Query String**: `@RequestParam` (如 `/users?page=1`)
-- **XML**: 歷史遺產，用 `@RequestBody` 配合 Jackson XML extension 可處理。
-- **Binary / Stream**: 用 `InputStream` 或 `byte[]` 接，通常用於影像處理。
-- **GraphQL**: 另一種 API 查詢語言，只有一個 Endpoint，查詢結構由前端定義。
-- **WebSocket**: 雙向即時通訊，不走傳統 HTTP Request/Response 模式。
+### 5. 檔案下載 (`Blob`)
 
-下一章，我們將挑戰最棘手的任務：**檔案上傳與下載**。
+下載的痛點在於：如果後端回傳二進位流，而你用一般的方式接，會變成一堆亂碼字串。因為 Ajax 預設是處理文字的。
+
+- **前端**：必須指定 `responseType: 'blob'`。
+- **後端**：回傳 `ResponseEntity<Resource>` 並設定正確的 Content-Type。
+
+#### Frontend (Axios)
+
+```javascript
+async function downloadImage() {
+  try {
+    const res = await axios.get("/api/download/cat.jpg", {
+      responseType: "blob", // 關鍵！告訴 Axios 不要轉文字，給我二進位物件
+    });
+
+    // 技巧：創造一個暫時的 URL 指向這個 Blob
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+
+    // 1. 如果是要顯示圖片
+    document.getElementById("img-preview").src = url;
+
+    // 2. 如果是要觸發瀏覽器下載
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", "cat.jpg"); // 設定下載檔名
+    document.body.appendChild(link);
+    link.click();
+    link.remove(); // 下載完移除連結
+
+    // 釋放記憶體
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error("下載失敗", err);
+  }
+}
+```
+
+#### Backend (Spring Boot)
+
+```java
+@GetMapping("/api/download/{filename}")
+public ResponseEntity<Resource> download(@PathVariable String filename) throws MalformedURLException {
+
+    Path path = Paths.get("C:/uploads/" + filename);
+    Resource resource = new UrlResource(path.toUri());
+
+    // 設定 Header 告訴瀏覽器這是要下載的 (attachment)
+    String headerValue = "attachment; filename=\"" + resource.getFilename() + "\"";
+
+    return ResponseEntity.ok()
+            .contentType(MediaType.IMAGE_JPEG) // 或 MediaType.APPLICATION_OCTET_STREAM
+            .header(HttpHeaders.CONTENT_DISPOSITION, headerValue)
+            .body(resource);
+}
+```
+
+### 總結對照表
+
+| 資料類型          | Content-Type               | 前端 (Axios)             | 後端 (Spring Annotations)            |
+| :---------------- | :------------------------- | :----------------------- | :----------------------------------- |
+| **JSON**          | `application/json`         | `{ name: 'A' }`          | `@RequestBody ProductDto dto`        |
+| **URL Path**      | N/A                        | `` `/api/${id}` ``       | `@PathVariable Long id`              |
+| **Query String**  | N/A                        | `{ params: { q: 'A' } }` | `@RequestParam String q`             |
+| **Form Data**     | `x-www-form-urlencoded`    | `new URLSearchParams()`  | `@RequestParam` / `@ModelAttribute`  |
+| **File Upload**   | `multipart/form-data`      | `new FormData()`         | `@RequestParam("f") MultipartFile f` |
+| **File Download** | `application/octet-stream` | `responseType: 'blob'`   | `ResponseEntity<Resource>`           |
+
+下一章，我們將進入全端開發的深水區：**Web 安全性與 Vue.js 整合**。
