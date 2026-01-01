@@ -1,4 +1,4 @@
-# 章節 2 ｜ 前端工程師的武器庫 (Modern Frontend)
+# 章節 2 ｜ 現代前端開發 (Modern Frontend)
 
 ## <a id="toc"></a>目錄
 

@@ -1,0 +1,431 @@
+# 章節 4 ｜ 全端安全性架構 (Full Stack Security)
+
+## <a id="toc"></a>目錄
+
+- [4-1 現代 Web 安全性：為什麼我們需要 JWT？](#CH4-1)
+- [4-2 後端實作：Spring Security + JWT 整合](#CH4-2)
+- [4-3 前端實作：Axios 攔截器與 Token 管理](#CH4-3)
+
+---
+
+### 序
+
+在解決了資料傳輸 (IO) 的問題後，我們要進入全端開發最重要的一環：**安全性 (Security)**。
+如何保護你的 API 不被駭客亂打？前後端分離下，怎麼做登入驗證？
+
+這章我們將拋棄傳統的 Session，全面擁抱 **JWT (JSON Web Token)**。
+
+---
+
+## <a id="CH4-1"></a>[4-1 現代 Web 安全性：為什麼我們需要 JWT？](#toc)
+
+在前後端分離的架構下，傳統的 Session-Cookie 驗證機制遇到了挑戰。我們需要一種更現代、更適合分散式系統的解決方案。
+
+### 傳統 Session 機制：回憶過去 (The Stateful Era)
+
+在 JWT 出現之前，Web 開發(如 JSP/Servlet, Spring MVC) 主要是依賴 **Session** 與 **Cookie** 來識別使用者。
+
+#### 運作流程
+
+- **登入**：使用者輸入帳密。
+- **建立 Session**：伺服器驗證通過後，在**伺服器記憶體 (RAM)** 中建立一個 `HttpSession` 物件，並產生一個唯一的 Session ID (如 `JSESSIONID`)。
+- **回傳 Cookie**：伺服器在 HTTP Response Header 中加入 `Set-Cookie: JSESSIONID=XYZ123;`。
+- **後續請求**：瀏覽器之後的每次請求，都會自動在 Header 帶上 `Cookie: JSESSIONID=XYZ123`。
+- **識別**：伺服器拿著這個 ID 去記憶體翻找：「喔！這是 Alice 的 Session」，然後放行。
+
+> **👻 複習：傳統 Session 寫法 (Spring MVC)**
+>
+> 雖然我們現在比較少用，但看懂舊程式碼也是一種技能：
+>
+> ```java
+> @PostMapping("/login")
+> public String login(String username, String password, HttpSession session) {
+>     if (checkUser(username, password)) {
+>         // 關鍵：將使用者資訊存入 "伺服器記憶體"
+>         // 伺服器會給這個 User 一個專屬的記憶體空間
+>         session.setAttribute("user", new User("Alice", "Admin"));
+>
+>         // Tomcat 會自動幫你把 JSESSIONID 塞給前端 Cookie，你不用寫程式碼
+>         return "loginSuccess";
+>     }
+>     return "loginFail";
+> }
+> ```
+
+#### Session 的三大痛點
+
+雖然 Session 很方便 (不用自己管加密)，但在現代架構下卻有致命傷：
+
+1.  **狀態問題 (Stateful) - 伺服器負擔大**
+    Server 必須在記憶體裡存著「所有登入的使用者」。如果有 100 萬人在線，Server 的 RAM 就會被塞爆。且一旦 Server 當機重開，記憶體清空，這 100 萬人就被強制登出了。
+2.  **擴展性問題 (Scalability) - 負載平衡的惡夢**
+    當網站流量變大，你加開了第二台 Server (Server B)。
+    - 使用者在 Server A 登入 (Session 在 A 的記憶體)。
+    - 下一次請求被 Load Balancer 導到了 Server B。
+    - **Server B：我不認識你啊！(因為 Session 不在我的記憶體)**
+    - _雖然可以用 Sticky Session 或 Redis Session 解決，但架構變得更複雜。_
+3.  **跨網域與行動端問題 (CORS & Mobile)**
+    - **Cookie** 對於跨網域 (Cross-Domain) 的限制非常嚴格，前後端不同網址時很容易被瀏覽器擋掉。
+    - **App (iOS/Android)** 原生不支援 Cookie 機制，要模擬 Cookie 行為很麻煩。
+
+### 現代解決方案：JWT (JSON Web Token)
+
+為了解決上述問題，**JWT** 應運而生。它是一種 **Stateless (無狀態)** 的驗證機制。
+
+它的核心概念是：**「Server 不存使用者的狀態，而是發給使用者一張有『防偽簽名』的識別證 (Token)。」**
+就像看電影的票根，工讀生不用記住你的臉，只要看票根是真的就能入場。
+
+### JWT 的結構解密
+
+一句話講重點：**JWT 是一種「把身分與狀態，打包成可被驗證、不可竄改字串」的憑證格式。**
+
+它長這樣：`xxxxx.yyyyy.zzzzz` (三段以 `.` 分隔的 Base64URL 字串)
+意義是：`Header.Payload.Signature` (標頭.內容.簽名)
+
+#### Part 1: Header (標頭)
+
+這部分主要用來描述 JWT 的元數據 (Metadata)，告訴伺服器應該如何處理這個 Token。它通常包含兩個關鍵資訊：
+
+1.  **`alg` (Algorithm)**：指定簽名所使用的雜湊演算法（如 `HS256` 對稱加密 或 `RS256` 非對稱加密）。
+2.  **`typ` (Type)**：Token 的類型，在 JWT 中固定為 `JWT`。
+
+```json
+{
+  "alg": "HS256",
+  "typ": "JWT"
+}
+```
+
+_這段 JSON 會經過 Base64Url 編碼成為第一段字串。_
+
+#### Part 2: Payload (內容)
+
+這是最重要的地方，存放我們真正要傳遞的資訊，這些資訊被稱為 **Claims (聲明)**。
+Claims 依照用途可以分為三種類型：
+
+1.  **Registered Claims (註冊聲明)**：
+    JWT 規範定義的標準欄位，建議使用但不強制。
+
+    - `iss` (Issuer): 發行者
+    - `sub` (Subject): 主題 (通常放 User ID)
+    - `exp` (Expiration Time): 過期時間 (Unix Timestamp，必要！)
+    - `iat` (Issued At): 簽發時間
+    - `aud` (Audience): 接收者
+
+2.  **Public Claims (公開聲明)**：
+    可以自由定義，但為了避免衝突，建議使用 URI 格式名稱 (如 `https://example.com/role`)。
+
+3.  **Private Claims (私有聲明)**：
+    **這最常用！** 前後端約定好的自定義欄位，用來傳遞業務資料。
+
+**範例 Payload：**
+
+```json
+{
+  "sub": "user_123", // Registered: User ID
+  "name": "Alice", // Private: 自定義欄位
+  "role": "ADMIN", // Private: 權限
+  "exp": 1735660800 // Registered: 過期時間
+}
+```
+
+> **⚠️ 重要觀念：JWT ≠ 加密**
+> Payload 只是透過 **Base64Url 編碼**，**並沒有加密 (Not Encrypted)**。
+> 意思是 **「任何拿到 Token 的人，都可以透過 Base64 解碼看到裡面的 Payload 內容」**。
+> 👉 **絕對不要在 Payload 放密碼、身分證字號、信用卡號等機敏資料。**
+
+#### Part 3: Signature (簽章)
+
+**這是 JWT 安全的靈魂**，它的用途只有一個：**「確保 Payload 沒有被竄改」**。
+
+簽章的產生過程：
+
+1. 取出編碼後的 Header。
+2. 取出編碼後的 Payload。
+3. 把兩者用 `.` 接起來：`HeaderInBase64.PayloadInBase64`。
+4. 使用 Server 獨有的 **Private Key (私鑰)** 對這串字串進行演算法雜湊 (如 HMACSHA256)。
+
+**公式如下：**
+
+```javascript
+// HS256 簽名公式概念
+Signature = HMACSHA256(
+  base64UrlEncode(header) + "." + base64UrlEncode(payload),
+  secret_key // 只有 Server 知道這把鑰匙 (絕對不能外流)
+);
+```
+
+**驗證原理 (Anti-tamper)：**
+當駭客把 Payload 裡的 `"role": "USER"` 偷改成 `"role": "ADMIN"` 時：
+
+1. Payload 的 Base64 字串變了。
+2. 駭客沒有 Server 的 `secret_key`，無法重新計算出正確的新 Signature。
+3. Server 收到 Token 後，用自己的 Key 重算一次，發現跟駭客傳來的不一樣 ❌。
+4. **驗證失敗，直接拒絕請求 (401 Unauthorized)**。
+
+---
+
+### JWT 與 Session 超級比一比
+
+| 比較項目     | Session (狀態在 Server)               | JWT (狀態在 Client)                     |
+| :----------- | :------------------------------------ | :-------------------------------------- |
+| **狀態儲存** | Server 記憶體 / Redis                 | Client 端 (LocalStorage/Cookie)         |
+| **擴充性**   | 困難 (需解決 Server 間同步問題)       | **容易** (Server 不存狀態，隨便加機器)  |
+| **登出機制** | **即時** (Server 刪掉 Session 即失效) | **不即時** (Token 發出後在過期前都有效) |
+| **資安風險** | Session Hijack                        | Token 外洩 (被偷走等於帳號被盜)         |
+| **適用場景** | 單體架構、傳統 MVC                    | **前後端分離、微服務、App**             |
+
+### JWT 的現實雷點 (Pitfalls)
+
+JWT 不是銀彈，使用時必須注意以下限制：
+
+1.  **無法即時登出**
+    因為 Server 不存狀態，一旦 Token 發給使用者，在 `exp` 過期前都有效。即使你後端刪除帳號，他手上的 Token 依然能通過驗證。
+    _(解法：搭配 Redis 做黑名單，但這又變回 Stateful 了)_。
+
+2.  **Token 體積較大**
+    比起只是一個短字串的 JSESSIONID，JWT 包含大量資訊，Header 請求會變大。Payload 不要塞太多無意義的資料。
+
+3.  **儲存風險 (XSS)**
+    通常我們把 JWT 存在 `localStorage`，但這容易被 XSS 攻擊讀取。較安全的做法是存在 **HttpOnly Cookie** (防止 JS 讀取)，但這會犧牲一些跨網域的便利性。
+
+> **💡 實務小撇步：Access Token + Refresh Token**
+> 為了安全性，通常會將 Access Token 效期設很短 (如 15 分鐘)，過期後用另一張長效的 Refresh Token (如 7 天) 去換新的。這樣就算 Access Token 被偷，駭客也只能使用 15 分鐘。
+
+### 總結：驗證流程
+
+1.  **登入**：前端傳帳密，後端驗證成功後**簽發 JWT**。
+2.  **儲存**：前端將 JWT 存起來 (LocalStorage)。
+3.  **攜帶**：前端發請求時，Header 帶上 `Authorization: Bearer <token>`。
+4.  **驗證**：後端**驗算簽章** (Signature) 與**檢查效期** (exp)。
+    - 通過 👉 解析 Payload 裡的 UserID，直接放行 (完全不用查 DB 或 Session)。
+    - 失敗 👉 401 Unauthorized。
+
+---
+
+## <a id="CH4-2"></a>[4-2 後端實作：Spring Security + JWT 整合](#toc)
+
+這通常是後端工程師最頭痛的部分。我們會簡化到最核心的配置。
+
+### 1. 引入依賴 (Maven)
+
+```xml
+<!-- Spring Security -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<!-- JWT 工具庫 (jjwt) -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.11.5</version>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.11.5</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+### 2. JWT 工具類 (JwtUtil)
+
+負責簽發 (Generate) 與 解析 (Parse) Token。
+
+```java
+@Component
+public class JwtUtil {
+    // 密鑰 (真實專案請放在配置文件並加密)
+    private final String SECRET_KEY = "mySuperSecretKeyDoNotShareWithAnyone";
+    private final long EXPIRATION_TIME = 86400000; // 1天 (毫秒)
+
+    private Key getSigningKey() {
+        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    }
+
+    // 1. 產生 Token
+    public String generateToken(String username) {
+        return Jwts.builder()
+                .setSubject(username)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
+    // 2. 驗證並解析 Token (若過期或為偽造會拋出 Exception)
+    public String validateTokenAndGetUsername(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
+}
+```
+
+### 3. 攔截器 (JwtAuthenticationFilter)
+
+這是最重要的守門員。它會攔截每一個請求，檢查 Header 有沒有 Token。
+
+```java
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    @Autowired private JwtUtil jwtUtil;
+    @Autowired private UserDetailsService userDetailsService;
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
+
+        // 1. 從 Header 拿 Token (Authorization: Bearer xxxxx)
+        String authHeader = request.getHeader("Authorization");
+
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7); // 去掉 "Bearer "
+            try {
+                // 2. 驗證 Token
+                String username = jwtUtil.validateTokenAndGetUsername(token);
+
+                // 3. 告訴 Spring Security 這個人是誰 (設定 SecurityContext)
+                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+                UsernamePasswordAuthenticationToken authentication =
+                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            } catch (Exception e) {
+                // Token 無效，就當作沒登入，不做任何事，讓它繼續往下走 (後面會被擋下)
+                System.out.println("Token 無效: " + e.getMessage());
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+### 4. 設定檔 (SecurityConfig)
+
+告訴 Spring Security 哪些路徑要擋，哪些不用。
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Autowired private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf.disable()) // 前後端分離通常關閉 CSRF
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 設定為無狀態 (不使用 Session)
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/api/login", "/api/register").permitAll() // 登入註冊頁面不用驗證
+                .anyRequest().authenticated() // 其他所有 API 都要登入才能用
+            )
+            // 把我們的 JWT Filter 加在 UsernamePasswordAuthenticationFilter 之前
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    // 這裡通常還需要設定 AuthenticationManager 與 UserDetailsService
+}
+```
+
+---
+
+## <a id="CH4-3"></a>[4-3 前端實作：Axios 攔截器與 Token 管理](#toc)
+
+後端設好了，前端要負責兩件事：
+
+1.  **存 Token**：登入成功後，把 Token 寫入 `localStorage`。
+2.  **帶 Token**：發請求時，自動把 Token 帶上 Header。
+
+### 登入並儲存 (Login)
+
+```javascript
+async function login(username, password) {
+  try {
+    const res = await axios.post("/api/login", { username, password });
+
+    // 假設後端回傳 { token: "eyJhb..." }
+    const token = res.data.token;
+
+    // 存入 LocalStorage
+    localStorage.setItem("jwt_token", token);
+    alert("登入成功！");
+  } catch (err) {
+    alert("登入失敗");
+  }
+}
+```
+
+### Axios 全局攔截器 (Interceptors)
+
+我們不希望每次發請求 (`axios.get...`) 都要手動寫 Header。我們可以用 Interceptor 來「劫持」所有請求，統一加工。
+
+```javascript
+// 建立一個 axios 實體 (建議不要汙染全域 axios)
+const api = axios.create({
+  baseURL: "http://localhost:8080/api",
+});
+
+// === Request 攔截器 (發出請求前) ===
+api.interceptors.request.use(
+  (config) => {
+    // 從 LocalStorage 拿 Token
+    const token = localStorage.getItem("jwt_token");
+    if (token) {
+      // 如果有 token，就加到 Header
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// === Response 攔截器 (收到回應後) ===
+api.interceptors.response.use(
+  (response) => {
+    return response; // 成功就直接回傳
+  },
+  (error) => {
+    // 統一處理 401 (未授權)
+    if (error.response && error.response.status === 401) {
+      alert("登入逾時，請重新登入");
+      localStorage.removeItem("jwt_token"); // 清除無效 token
+      window.location.href = "/login.html"; // 導回登入頁
+    }
+    return Promise.reject(error);
+  }
+);
+
+// 之後使用 api.get() 就會自動帶 Token 了！
+```
+
+### 總結
+
+現在的架構已經非常完整：
+
+1.  使用者輸入帳密。
+2.  後端驗證通過，簽發 JWT。
+3.  前端收到 JWT，存入 LocalStorage。
+4.  之後所有請求，Axios 自動帶上 JWT。
+5.  後端 Filter 攔截檢查 JWT，合法才放行。
+6.  若 JWT 過期，後端回傳 401，前端自動導回登入頁。
+
+下一章，我們要把這一切「元件化」，用 Vue.js 來優化我們的開發體驗。
