@@ -4,7 +4,8 @@
 
 - [4-1 現代 Web 安全性：為什麼我們需要 JWT？](#CH4-1)
 - [4-2 後端實作：Spring Security + JWT 整合](#CH4-2)
-- [4-3 前端實作：Axios 攔截器與 Token 管理](#CH4-3)
+- [4-3 後端簡化配置 (Simplified Configuration)](#CH4-3)
+- [4-4 前端實作：Axios 攔截器與 Token 管理](#CH4-4)
 
 ---
 
@@ -112,11 +113,11 @@ Claims 依照用途可以分為三種類型：
     - `iat` (Issued At): 簽發時間
     - `aud` (Audience): 接收者
 
-2.  **Public Claims (公開聲明)**：
-    可以自由定義，但為了避免衝突，建議使用 URI 格式名稱 (如 `https://example.com/role`)。
+2.  **Public Claims (公開聲明，原則上期末專案中不會有機會使用)**：
+    可以由使用者自定義，但為了避免名稱衝突，建議在 [IANA JSON Web Token Registry](https://www.iana.org/assignments/jwt/jwt.xhtml) 進行註冊，或是將其定義為一個包含抗衝突命名空間的 URI (例如 `https://example.com/is_admin`)。
 
 3.  **Private Claims (私有聲明)**：
-    **這最常用！** 前後端約定好的自定義欄位，用來傳遞業務資料。
+    前後端約定好的自定義欄位，用來傳遞業務資料。
 
 **範例 Payload：**
 
@@ -172,7 +173,7 @@ Signature = HMACSHA256(
 | **狀態儲存** | Server 記憶體 / Redis                 | Client 端 (LocalStorage/Cookie)         |
 | **擴充性**   | 困難 (需解決 Server 間同步問題)       | **容易** (Server 不存狀態，隨便加機器)  |
 | **登出機制** | **即時** (Server 刪掉 Session 即失效) | **不即時** (Token 發出後在過期前都有效) |
-| **資安風險** | Session Hijack                        | Token 外洩 (被偷走等於帳號被盜)         |
+| **資安風險** | Session Hijack(會話劫持)              | Token 外洩 (被偷走等於帳號被盜)         |
 | **適用場景** | 單體架構、傳統 MVC                    | **前後端分離、微服務、App**             |
 
 ### JWT 的現實雷點 (Pitfalls)
@@ -205,32 +206,35 @@ JWT 不是銀彈，使用時必須注意以下限制：
 
 ## <a id="CH4-2"></a>[4-2 後端實作：Spring Security + JWT 整合](#toc)
 
-這通常是後端工程師最頭痛的部分。我們會簡化到最核心的配置。
+這通常是後端工程師最頭痛的部分，以下介紹較為完整的整合方式。
 
 ### 1. 引入依賴 (Maven)
 
 ```xml
-<!-- Spring Security -->
+<!-- === Spring Security === -->
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-security</artifactId>
 </dependency>
-<!-- JWT 工具庫 (jjwt) -->
+<!-- === JWT 工具庫 (jjwt) === -->
+<!-- jjwt 介面 -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-api</artifactId>
-    <version>0.11.5</version>
+    <version>0.13.0</version>
 </dependency>
+<!-- jjwt 實作 -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-impl</artifactId>
-    <version>0.11.5</version>
+    <version>0.13.0</version>
     <scope>runtime</scope>
 </dependency>
+<!-- 讓 jjwt 使用 Jackson 進行 JSON 解析(Springboot 預設使用 Jackson) -->
 <dependency>
     <groupId>io.jsonwebtoken</groupId>
     <artifactId>jjwt-jackson</artifactId>
-    <version>0.11.5</version>
+    <version>0.13.0</version>
     <scope>runtime</scope>
 </dependency>
 ```
@@ -242,75 +246,132 @@ JWT 不是銀彈，使用時必須注意以下限制：
 ```java
 @Component
 public class JwtUtil {
-    // 密鑰 (真實專案請放在配置文件並加密)
-    private final String SECRET_KEY = "mySuperSecretKeyDoNotShareWithAnyone";
-    private final long EXPIRATION_TIME = 86400000; // 1天 (毫秒)
+    // 私鑰 (真實專案請放在配置文件並加密)
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("my_super_secret_key_do_not_share_with_anyone".getBytes());
 
-    private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(SECRET_KEY.getBytes());
+    // JWT 有效時間，單位為秒
+    private final long EXPIRATION_IN_SECONDS = 60 * 60;
+
+    /**
+     * 產生 JWT
+     */
+    public String generateToken(String userId, String role) {
+        return Jwts.builder() // 使用 builder 模式設定 token
+                .subject(userId) // 設定主題(subject)，通常放唯一識別的 User ID
+                .claim("role", role) // 設定自定義的 claim，可隨需求增加，但建議不要存放太多資料
+                // .claim("role", List.of("user", "admin")) // 也可存放物件
+                .issuedAt(new Date()) // 設定發行時間
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_IN_SECONDS * 1000)) // 設定到期時間
+                .signWith(SECRET_KEY) // 使用私鑰簽名
+                .compact(); // 產生 token
     }
 
-    // 1. 產生 Token
-    public String generateToken(String username) {
-        return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
+    /**
+     * 解析並驗證 JWT，若驗證失敗則拋出異常
+     */
+    public Claims getClaims(String token) {
+      return Jwts.parser() // 使用 parser() 取得解析器
+          .verifyWith(SECRET_KEY) // 設定解密用密鑰
+          .build() // 建立解析器
+          .parseSignedClaims(token) // 解析 token
+          .getPayload(); // 取得解析後結果
     }
 
-    // 2. 驗證並解析 Token (若過期或為偽造會拋出 Exception)
-    public String validateTokenAndGetUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+    /**
+     * 取得主題 (通常是 User ID)
+     */
+    public String getSubject(String token) {
+      return getClaims(token).getSubject();
     }
+
+    /**
+     * 取得自定義的 claim
+     */
+    public String getValue(String token, String key) {
+      return (String) getClaims(token).get(key);
+    }
+
+    /**
+     * 驗證 Token 是否合法
+     */
+    public Boolean isTokenValid(String token) {
+      getSubject(token); // 若 token 有任何異常，則由 jjwt 套件直接拋出錯誤。
+      return true; // 能走到回傳表示驗證通過，token 合法
+    }
+
 }
 ```
 
 ### 3. 攔截器 (JwtAuthenticationFilter)
 
-這是最重要的守門員。它會攔截每一個請求，檢查 Header 有沒有 Token。
+這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。
 
 ```java
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    @Autowired private JwtUtil jwtUtil;
-    @Autowired private UserDetailsService userDetailsService;
+	private final HandlerExceptionResolver handlerExceptionResolver;
+	private final MemberService memberService;
+	private final JwtUtil jwtUtil;
 
-    @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
-            throws ServletException, IOException {
+	public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver, MemberService memberService,
+			JwtUtil jwtUtil) {
+		this.handlerExceptionResolver = handlerExceptionResolver;
+		this.memberService = memberService;
+		this.jwtUtil = jwtUtil;
+	}
 
-        // 1. 從 Header 拿 Token (Authorization: Bearer xxxxx)
-        String authHeader = request.getHeader("Authorization");
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
+		// 從 headers 中取得 Authorization header
+		final String authHeader = request.getHeader("Authorization");
 
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // 去掉 "Bearer "
-            try {
-                // 2. 驗證 Token
-                String username = jwtUtil.validateTokenAndGetUsername(token);
+		// 若 http 請求的 headers 中不包含 Authorization；或者 headers 中包含
+		// Authorization，但格式不合法，則直接交由 Spring Security 處理
+		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+			filterChain.doFilter(request, response);
+			return;
+		}
 
-                // 3. 告訴 Spring Security 這個人是誰 (設定 SecurityContext)
-                UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-                UsernamePasswordAuthenticationToken authentication =
-                    new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+		// 提取 jwt token
+		final String jwtToken = authHeader.substring(7);
 
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+		// 檢驗 jwt 是否有效，若解析過程中出現錯誤，則會由 jwtUtil（基於 jjwt 實現）拋出異常。
+		// 捕獲異常後，轉發給 GlobalExceptionHandler，並在那定義回應狀態碼。
+		try {
+			jwtUtil.isTokenValid(jwtToken);
+		} catch (Exception e) {
+			handlerExceptionResolver.resolveException(request, response, null, e);
+			return;
+		}
 
-            } catch (Exception e) {
-                // Token 無效，就當作沒登入，不做任何事，讓它繼續往下走 (後面會被擋下)
-                System.out.println("Token 無效: " + e.getMessage());
-            }
-        }
+		// 讀取 member 資料
+		Integer memberId = Integer.valueOf(jwtUtil.getSubject(jwtToken));
+		MemberDto memberDto = memberService.getById(memberId);
 
-        filterChain.doFilter(request, response);
-    }
+		// 若管理員則給予管理員權限
+		Set<SimpleGrantedAuthority> auths = new HashSet<>();
+		if (Objects.equals(memberDto.getRole(), "ADMIN")) {
+			auths.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+		}
+
+		/**
+		 * UsernamePasswordAuthenticationToken 為 Spring Security 設計用於表示「已認證身份」的標準物件
+		 * 參數一: 認證成功的使用者物件
+		 * 參數二: 憑證、密碼等物件，但在 JWT 驗證中不須提供(若是傳統 MVC 表單認證才須提供)
+		 * 參數三: 權限列表物件
+		 */
+		UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+				memberDto, null, auths);
+
+		// 在此次 HTTP 請求(context)中，儲存驗證成功的 user
+		SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+
+		// 繼續執行過濾鏈
+		filterChain.doFilter(request, response);
+	}
+
 }
 ```
 
@@ -323,30 +384,404 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired private JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final JwtAuthenticationFilter jwtAuthenticationFilter;
+	private final HandlerExceptionResolver handlerExceptionResolver;
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable()) // 前後端分離通常關閉 CSRF
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // 設定為無狀態 (不使用 Session)
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/login", "/api/register").permitAll() // 登入註冊頁面不用驗證
-                .anyRequest().authenticated() // 其他所有 API 都要登入才能用
-            )
-            // 把我們的 JWT Filter 加在 UsernamePasswordAuthenticationFilter 之前
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+	public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+			HandlerExceptionResolver handlerExceptionResolver) {
+		this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+		this.handlerExceptionResolver = handlerExceptionResolver;
+	}
 
-        return http.build();
+	@Bean
+	SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+		// CORS: 設定允許的 domain、method、header
+		CorsConfiguration corsConfiguration = new CorsConfiguration();
+		corsConfiguration.setAllowedOrigins(List.of("*"));
+		corsConfiguration.setAllowedMethods(List.of("*"));
+		corsConfiguration.setAllowedHeaders(List.of("*"));
+
+		// 設定開放的 URL，無須登入
+		List<String> allowedURL = List.of(
+			"/test/**", // 開放測試用程式，無須權限驗證
+			"/api/auth/**", // 開放認證相關程式，如登入、登出
+			"/api/**" // 開發時故意全部開放
+		);
+
+		return http // 使用 HttpSecurity http 物件展開串聯設定
+				.cors(cros -> cros.configurationSource(request -> corsConfiguration)) // 使用自訂的 corsConfiguration
+				.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // jwt 無狀態
+				.csrf(AbstractHttpConfigurer::disable) // 因無狀態，故不用考慮 CSRF(跨站請求偽造) 問題
+				.authorizeHttpRequests(auth -> {
+					// 設定權限主要位置，比對順序由上往下，先比對成功則先放行。
+
+					// 將 allowedURL 中的所有路徑設為無須登入即可訪問
+					for (String url : allowedURL) {
+						auth.requestMatchers(url).permitAll();
+					}
+
+					// Admin API 只有管理員角色才可以存取。
+					auth.requestMatchers("/api/admin/**").hasRole("ADMIN");
+
+					// 除了開放的 api 以外，其他都要有"登入狀態"才能存取
+					auth.anyRequest().authenticated();
+				})
+				.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class) // 新增自訂過濾器，以處理 jwt 驗證與解析
+				.exceptionHandling(exceptionHandling -> {
+					/**
+					 * === 轉發驗證錯誤 ===
+					 * 為什麼要轉發錯誤?
+					 * Spring Security 的驗證在 Spring MVC 的執行流程之前進行。
+					 * 當驗證失敗（如未授權訪問或權限不足）時，Spring Security 會拋出錯誤，
+					 * 但這些異常不會進入 MVC 層，因此無法被 GlobalExceptionHandler 捕獲。
+					 *
+					 * 故我們在此處使用 HandlerExceptionResolver 將異常轉發，
+					 * 以便統一由全局異常處理器進行處理。
+					 */
+					exceptionHandling.authenticationEntryPoint((req, resp, exception) -> {
+						handlerExceptionResolver.resolveException(req, resp, null, exception);
+					});
+				}).build();
+	}
+}
+
+```
+
+### 5. 驗證服務 (AuthService)
+
+為了方便在 Controller 或 Service 層取得「當前登入的使用者」，我們封裝一個 `AuthService`。
+
+```java
+@Service
+public class AuthService {
+    /**
+     * 取得當前登入的使用者資訊
+     * 我們在 Filter 中已將驗證成功的 MemberDto 放入 SecurityContextHolder
+     */
+    public MemberDto getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.getPrincipal() instanceof MemberDto) {
+            return (MemberDto) authentication.getPrincipal();
+        }
+
+        return null; // 未登入或無法識別
     }
+}
+```
 
-    // 這裡通常還需要設定 AuthenticationManager 與 UserDetailsService
+### 6. 全域錯誤處理 (GlobalExceptionHandler)
+
+為了讓前端能收到統一格式的錯誤訊息，並正確處理 401/403 等狀態碼，我們使用 Spring 的 `@ControllerAdvice` 來集中處理異常。
+
+```java
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+	/* === 其他內部錯誤，直接回應 === */
+	// 其他內部錯誤 > 500
+	@ExceptionHandler(Exception.class)
+	public ResponseEntity<String> handleInternalServerException(Exception exception) {
+		exception.printStackTrace(); // 在 console 區列印出錯誤，以便錯誤追蹤
+		return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(exception.getMessage());
+	}
+
+	/* === 未登入或權限不足 === */
+	// 未登入 > 401
+	@ExceptionHandler(InsufficientAuthenticationException.class)
+	public ResponseEntity<String> handleInsufficientAuthenticationException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("未登入或無權存取此資源。");
+	}
+
+	/* === 權限不足(例如刪除別人的貼文) === */
+	// 權限不足 > 403
+	@ExceptionHandler(AccessDeniedException.class) // AccessDeniedException 是自定義錯誤
+	public ResponseEntity<String> handleAccessDeniedException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body("你無權執行此操作");
+	}
+
+	/* === 請求參數檢驗失敗(null 或空白) === */
+	// 參數錯誤 > 400
+	@ExceptionHandler(MethodArgumentNotValidException.class)
+	public ResponseEntity<String> handleValidationException(MethodArgumentNotValidException exception) {
+    exception.printStackTrace();
+		StringBuilder errorMessage = new StringBuilder();
+
+		exception.getBindingResult().getAllErrors().forEach(error -> {
+			if (error instanceof FieldError fieldError) {
+				errorMessage.append(fieldError.getField());
+				errorMessage.append(": ");
+				errorMessage.append(fieldError.getDefaultMessage());
+				errorMessage.append("、");
+			} else {
+				errorMessage.append(error.getDefaultMessage());
+			}
+		});
+
+		// 若最後一個字是「、」則移除。
+		if (errorMessage.lastIndexOf("、") == errorMessage.length() - 1) {
+			errorMessage.deleteCharAt(errorMessage.length() - 1);
+		}
+
+		return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMessage.toString());
+	}
+
+	/* === 登入失敗 === */
+	// 帳號或密碼錯誤 > 401
+	@ExceptionHandler(IncorrectAccountOrPasswordException.class) // IncorrectAccountOrPasswordException 是自定義錯誤
+	public ResponseEntity<String> handleIncorrectAccountOrPasswordException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("登入失敗，帳號或密碼錯誤。");
+	}
+
+	// 帳號被禁用 > 403
+	@ExceptionHandler(AccountDisabledException.class) // AccountDisabledException 是自定義錯誤
+	public ResponseEntity<String> handleAccountDisabledException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.FORBIDDEN).body("登入失敗，此帳號已被禁止使用。");
+	}
+
+	/* === JWT === */
+	// jwt 過期 > 401
+	@ExceptionHandler(ExpiredJwtException.class)
+	public ResponseEntity<String> handleJwtExpiredException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("jwt token 已過期，請重新登入。");
+	}
+
+	// jwt 解析錯誤 > 401
+	@ExceptionHandler(JwtException.class)
+	public ResponseEntity<String> handleJwtException(Exception exception) {
+    exception.printStackTrace();
+		return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("jwt token 不合法。");
+	}
 }
 ```
 
 ---
 
-## <a id="CH4-3"></a>[4-3 前端實作：Axios 攔截器與 Token 管理](#toc)
+## <a id="CH4-3"></a>[4-3 後端簡化配置](#toc)
+
+為了降低學習門檻，讓同學能更專注在 API 的功能開發，我們提供一套「簡化版」的 Security 配置。
+這套配置的核心精神是：**「雖然有做登入檢查，但預設不擋任何權限 (Permit All)」**。
+
+### 1. 引入依賴 (Maven)
+
+與標準版相同，確保 `pom.xml` 有以下依賴：
+
+```xml
+<!-- === Spring Security === -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-security</artifactId>
+</dependency>
+<!-- === JWT 工具庫 (jjwt) === -->
+<!-- jjwt 介面 -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-api</artifactId>
+    <version>0.13.0</version>
+</dependency>
+<!-- jjwt 實作 -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-impl</artifactId>
+    <version>0.13.0</version>
+    <scope>runtime</scope>
+</dependency>
+<!-- 讓 jjwt 使用 Jackson 進行 JSON 解析(Springboot 預設使用 Jackson) -->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt-jackson</artifactId>
+    <version>0.13.0</version>
+    <scope>runtime</scope>
+</dependency>
+```
+
+### 2. JWT 工具類 (JwtUtil)
+
+負責簽發 (Generate) 與 解析 (Parse) Token。
+
+```java
+@Component
+public class JwtUtil {
+    // 私鑰 (真實專案請放在配置文件並加密)
+    private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor("my_super_secret_key_do_not_share_with_anyone".getBytes());
+
+    // JWT 有效時間，單位為秒
+    private final long EXPIRATION_IN_SECONDS = 60 * 60;
+
+    /**
+     * 產生 JWT
+     */
+    public String generateToken(String userId, String role) {
+        return Jwts.builder() // 使用 builder 模式設定 token
+                .subject(userId) // 設定主題(subject)，通常放唯一識別的 User ID
+                .claim("role", role) // 設定自定義的 claim，可隨需求增加，但建議不要存放太多資料
+                // .claim("role", List.of("user", "admin")) // 也可存放物件
+                .issuedAt(new Date()) // 設定發行時間
+                .expiration(new Date(System.currentTimeMillis() + EXPIRATION_IN_SECONDS * 1000)) // 設定到期時間
+                .signWith(SECRET_KEY) // 使用私鑰簽名
+                .compact(); // 產生 token
+    }
+
+    /**
+     * 解析並驗證 JWT，若驗證失敗則拋出異常
+     */
+    public Claims getClaims(String token) {
+      return Jwts.parser() // 使用 parser() 取得解析器
+          .verifyWith(SECRET_KEY) // 設定解密用密鑰
+          .build() // 建立解析器
+          .parseSignedClaims(token) // 解析 token
+          .getPayload(); // 取得解析後結果
+    }
+
+    /**
+     * 取得主題 (通常是 User ID)
+     */
+    public String getSubject(String token) {
+      return getClaims(token).getSubject();
+    }
+
+    /**
+     * 取得自定義的 claim
+     */
+    public String getValue(String token, String key) {
+      return (String) getClaims(token).get(key);
+    }
+
+    /**
+     * 驗證 Token 是否合法
+     */
+    public Boolean isTokenValid(String token) {
+      getSubject(token); // 若 token 有任何異常，則由 jjwt 套件直接拋出錯誤。
+      return true; // 能走到回傳表示驗證通過，token 合法
+    }
+
+}
+```
+
+### 3. 攔截器 (JwtAuthenticationFilter)
+
+這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。
+
+```java
+@Component
+public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+	private final HandlerExceptionResolver handlerExceptionResolver;
+	private final MemberService memberService;
+	private final JwtUtil jwtUtil;
+
+	public JwtAuthenticationFilter(HandlerExceptionResolver handlerExceptionResolver, MemberService memberService,
+			JwtUtil jwtUtil) {
+		this.handlerExceptionResolver = handlerExceptionResolver;
+		this.memberService = memberService;
+		this.jwtUtil = jwtUtil;
+	}
+
+	@Override
+	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+			throws ServletException, IOException {
+		// 從 headers 中取得 Authorization header
+		final String authHeader = request.getHeader("Authorization");
+
+		// 若 http 請求的 headers 中不包含 Authorization；或者 headers 中包含
+		// Authorization，但格式不合法，則直接交由 Spring Security 處理
+		if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+			filterChain.doFilter(request, response);
+			return;
+		}
+
+		// 提取 jwt token
+		final String jwtToken = authHeader.substring(7);
+
+		// 讀取 member 資料
+		Integer memberId = Integer.valueOf(jwtUtil.getSubject(jwtToken));
+		MemberDto memberDto = memberService.getById(memberId);
+
+		/**
+		 * UsernamePasswordAuthenticationToken 為 Spring Security 設計用於表示「已認證身份」的標準物件
+		 * 參數一: 認證成功的使用者物件
+		 * 參數二: 憑證、密碼等物件，但在 JWT 驗證中不須提供(若是傳統 MVC 表單認證才須提供)
+		 * 參數三: 權限列表物件
+		 */
+		UsernamePasswordAuthenticationToken usernamePasswordAuthenticationToken = new UsernamePasswordAuthenticationToken(
+				memberDto, null, null);
+
+		// 在此次 HTTP 請求(context)中，儲存驗證成功的 user
+		SecurityContextHolder.getContext().setAuthentication(usernamePasswordAuthenticationToken);
+
+		// 繼續執行過濾鏈
+		filterChain.doFilter(request, response);
+	}
+
+}
+```
+
+### 4. 驗證服務 (AuthService)
+
+為了方便在 Controller 或 Service 層取得「當前登入的使用者」，我們封裝一個 `AuthService`。
+
+```java
+@Service
+public class AuthService {
+    /**
+     * 取得當前登入的使用者資訊
+     * 由於我們在 SecurityConfig 設定了 .anyRequest().permitAll()，
+     * 所以這裡取得的 authentication 可能是 null (未登入) 或 AnonymousAuthenticationToken。
+     */
+    public MemberDto getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication != null && authentication.getPrincipal() instanceof MemberDto) {
+            return (MemberDto) authentication.getPrincipal();
+        }
+
+        return null; // 未登入或無法識別
+    }
+}
+```
+
+### 5. 簡化版設定檔 (SecurityConfig)
+
+這是與標準版最大的差異。我們將 `authorizeHttpRequests` 全部設為 `permitAll()`，意思是不管有沒有 Token，路徑都會放行。
+但我們還是保留了 `JwtAuthenticationFilter`，確保如果使用者有帶 Token，我們依然能解析出身分並放入 Context，供後續程式使用。
+
+```java
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        return http
+            // 1. 關閉 CSRF (因為是無狀態 API，且為了簡化教學)
+            .csrf(csrf -> csrf.disable())
+            // 2. 關閉 Session (改用 JWT)
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            // 3. 允許所有請求 (為了簡化教學，讓學生先專注在功能實作，不被權限擋住)
+            .authorizeHttpRequests(auth -> auth
+                .anyRequest().permitAll()
+            )
+            // 4. 插入 JWT Filter (雖然允許所有請求，但還是要解析 Token 才知道是誰)
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .build();
+    }
+}
+```
+
+---
+
+## <a id="CH4-4"></a>[4-4 前端實作：Axios 攔截器與 Token 管理](#toc)
 
 後端設好了，前端要負責兩件事：
 
