@@ -304,7 +304,7 @@ public class JwtUtil {
 
 ### 3. 攔截器 (JwtAuthenticationFilter)
 
-這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。
+這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。在此標準實作中，我們包含了完整的異常捕獲 (Try-Catch)，能將 Token 過期或錯誤的訊息，精準地轉發給 `GlobalExceptionHandler` 處理，回傳正確的狀態碼 (401/403)。
 
 ```java
 @Component
@@ -565,7 +565,9 @@ public class GlobalExceptionHandler {
 ## <a id="CH4-3"></a>[4-3 後端簡化配置](#toc)
 
 為了降低學習門檻，讓同學能更專注在 API 的功能開發，我們提供一套「簡化版」的 Security 配置。
-這套配置的核心精神是：**「雖然有做登入檢查，但預設不擋任何權限 (Permit All)」**。
+這套配置適合**期末專案初期**或**驗證功能**時使用。
+
+它的核心精神是：**「雖然有做登入檢查，但預設不擋任何權限 (Permit All)」**。只要 Token 合法，我們就將使用者資訊放入 Context；若 Token 無效或沒帶，也不會特別阻擋請求，讓後續的 Controller 決定如何處理。
 
 ### 1. 引入依賴 (Maven)
 
@@ -663,9 +665,10 @@ public class JwtUtil {
 }
 ```
 
-### 3. 攔截器 (JwtAuthenticationFilter)
+### 3. 攔截器 (簡化版 JwtAuthenticationFilter)
 
-這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。
+在這個簡化版本中，我們**移除了錯誤處理 (Try-Catch) 與權限轉換 (Role)** 的邏輯，讓程式碼更乾淨易懂。
+若是 Token 格式錯誤或過期，`jwtUtil` 會直接拋出例外 (導致 HTTP 500)，但在教學練習階段，這足以讓我們確認「Token 是否有效」。
 
 ```java
 @Component
