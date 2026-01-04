@@ -36,11 +36,11 @@ btn.addEventListener("click", () => {
 });
 ```
 
-這叫做 **命令式編程 (Imperative)**：你必須一步步告訴瀏覽器「怎麼做」。當網頁越來越大，維護這些 DOM 操作會變成惡夢。
+這叫做 **命令式程式設計 (Imperative)**：你必須一步步告訴瀏覽器「怎麼做」。當網頁越來越大，維護這些 DOM 操作會變成惡夢。
 
 ### Vue.js 的思維
 
-Vue 提倡 **宣告式編程 (Declarative)** 與 **資料驅動 (Data-Driven)**。
+Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driven)**。
 你只要把變數 (`count`) 改掉，Vue 會自動幫你把所有用到 `count` 的畫面更新。你完全不需要寫 `document.getElementById`。
 
 ---
