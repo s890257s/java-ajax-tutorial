@@ -3,13 +3,35 @@
 ## <a id="toc"></a>目錄
 
 - [4-1 現代 Web 安全性：為什麼我們需要 JWT？](#CH4-1)
+  - [傳統 Session 機制：回憶過去 (The Stateful Era)](#CH4-1-1)
+  - [現代解決方案：JWT (JSON Web Token)](#CH4-1-2)
+  - [JWT 的結構解密](#CH4-1-3)
+  - [JWT 與 Session 超級比一比](#CH4-1-4)
+  - [JWT 的現實雷點 (Pitfalls)](#CH4-1-5)
+  - [總結：驗證流程](#CH4-1-6)
 - [4-2 後端實作：Spring Security + JWT 整合](#CH4-2)
+  - [1. 引入依賴 (Maven)](#CH4-2-1)
+  - [2. JWT 工具類 (JwtUtil)](#CH4-2-2)
+  - [3. 攔截器 (JwtAuthenticationFilter)](#CH4-2-3)
+  - [4. 設定檔 (SecurityConfig)](#CH4-2-4)
+  - [5. 驗證服務 (AuthService)](#CH4-2-5)
+  - [6. 全域錯誤處理 (GlobalExceptionHandler)](#CH4-2-6)
 - [4-3 後端簡化配置 (Simplified Configuration)](#CH4-3)
+  - [1. 引入依賴 (Maven)](#CH4-3-1)
+  - [2. JWT 工具類 (JwtUtil)](#CH4-3-2)
+  - [3. 攔截器 (簡化版 JwtAuthenticationFilter)](#CH4-3-3)
+  - [4. 驗證服務 (AuthService)](#CH4-3-4)
+  - [5. 簡化版設定檔 (SecurityConfig)](#CH4-3-5)
 - [4-4 前端實作：Axios 攔截器與 Token 管理](#CH4-4)
+  - [1. 建立 axios 實例 (apiClient.js)](#CH4-4-1)
+  - [2. 請求攔截器 (附帶 Token)](#CH4-4-2)
+  - [3. 回應攔截器 (統一處理錯誤)](#CH4-4-3)
+  - [4. 登出機制 (Logout)](#CH4-4-4)
+- [4-5 結語：Web 開發的完整拼圖](#CH4-5)
 
 ---
 
-### 序
+### [序](#toc)
 
 在解決了資料傳輸 (IO) 的問題後，我們要進入全端開發最重要的一環：**安全性 (Security)**。
 如何保護你的 API 不被駭客亂打？前後端分離下，怎麼做登入驗證？
@@ -22,7 +44,7 @@
 
 在前後端分離的架構下，傳統的 Session-Cookie 驗證機制遇到了挑戰。我們需要一種更現代、更適合分散式系統的解決方案。
 
-### 傳統 Session 機制：回憶過去 (The Stateful Era)
+### <a id="CH4-1-1"></a>[傳統 Session 機制：回憶過去 (The Stateful Era)](#toc)
 
 在 JWT 出現之前，Web 開發(如 JSP/Servlet, Spring MVC) 主要是依賴 **Session** 與 **Cookie** 來識別使用者。
 
@@ -69,14 +91,14 @@
     - **Cookie** 對於跨網域 (Cross-Domain) 的限制非常嚴格，前後端不同網址時很容易被瀏覽器擋掉。
     - **App (iOS/Android)** 原生不支援 Cookie 機制，要模擬 Cookie 行為很麻煩。
 
-### 現代解決方案：JWT (JSON Web Token)
+### <a id="CH4-1-2"></a>[現代解決方案：JWT (JSON Web Token)](#toc)
 
 為了解決上述問題，**JWT** 應運而生。它是一種 **Stateless (無狀態)** 的驗證機制。
 
 它的核心概念是：**「Server 不存使用者的狀態，而是發給使用者一張有『防偽簽名』的識別證 (Token)。」**
 就像看電影的票根，工讀生不用記住你的臉，只要看票根是真的就能入場。
 
-### JWT 的結構解密
+### <a id="CH4-1-3"></a>[JWT 的結構解密](#toc)
 
 一句話講重點：**JWT 是一種「把身分與狀態，打包成可被驗證、不可竄改字串」的憑證格式。**
 
@@ -166,7 +188,7 @@ Signature = HMACSHA256(
 
 ---
 
-### JWT 與 Session 超級比一比
+### <a id="CH4-1-4"></a>[JWT 與 Session 超級比一比](#toc)
 
 | 比較項目     | Session (狀態在 Server)               | JWT (狀態在 Client)                     |
 | :----------- | :------------------------------------ | :-------------------------------------- |
@@ -176,7 +198,7 @@ Signature = HMACSHA256(
 | **資安風險** | Session Hijack(會話劫持)              | Token 外洩 (被偷走等於帳號被盜)         |
 | **適用場景** | 單體架構、傳統 MVC                    | **前後端分離、微服務、App**             |
 
-### JWT 的現實雷點 (Pitfalls)
+### <a id="CH4-1-5"></a>[JWT 的現實雷點 (Pitfalls)](#toc)
 
 JWT 不是銀彈，使用時必須注意以下限制：
 
@@ -193,7 +215,7 @@ JWT 不是銀彈，使用時必須注意以下限制：
 > **💡 實務小撇步：Access Token + Refresh Token**
 > 為了安全性，通常會將 Access Token 效期設很短 (如 15 分鐘)，過期後用另一張長效的 Refresh Token (如 7 天) 去換新的。這樣就算 Access Token 被偷，駭客也只能使用 15 分鐘。
 
-### 總結：驗證流程
+### <a id="CH4-1-6"></a>[總結：驗證流程](#toc)
 
 1.  **登入**：前端傳帳密，後端驗證成功後**簽發 JWT**。
 2.  **儲存**：前端將 JWT 存起來 (LocalStorage)。
@@ -208,7 +230,7 @@ JWT 不是銀彈，使用時必須注意以下限制：
 
 這通常是後端工程師最頭痛的部分，以下介紹較為完整的整合方式。
 
-### 1. 引入依賴 (Maven)
+### <a id="CH4-2-1"></a>[1. 引入依賴 (Maven)](#toc)
 
 ```xml
 <!-- === Spring Security === -->
@@ -239,7 +261,7 @@ JWT 不是銀彈，使用時必須注意以下限制：
 </dependency>
 ```
 
-### 2. JWT 工具類 (JwtUtil)
+### <a id="CH4-2-2"></a>[2. JWT 工具類 (JwtUtil)](#toc)
 
 負責簽發與解析 Token。
 
@@ -302,7 +324,7 @@ public class JwtUtil {
 }
 ```
 
-### 3. 攔截器 (JwtAuthenticationFilter)
+### <a id="CH4-2-3"></a>[3. 攔截器 (JwtAuthenticationFilter)](#toc)
 
 這是最重要的守門員。它會攔截每一個 HTTP 請求，檢查 Header 有沒有 Token。  
 在此標準實作中，我們包含了完整的異常捕獲 (Try-Catch)，能將 Token 過期或錯誤的訊息，精準地轉發給 `GlobalExceptionHandler` 處理，回傳正確的狀態碼 (401/403)。
@@ -376,7 +398,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 }
 ```
 
-### 4. 設定檔 (SecurityConfig)
+### <a id="CH4-2-4"></a>[4. 設定檔 (SecurityConfig)](#toc)
 
 告訴 Spring Security 哪些路徑要擋，哪些不用。
 
@@ -474,7 +496,7 @@ public class SecurityConfig {
 > 3. **無狀態性**：
 >    由於後端不儲存 Session，且請求必須顯式攜帶 Token，這天然地防禦了 CSRF 攻擊。
 
-### 5. 驗證服務 (AuthService)
+### <a id="CH4-2-5"></a>[5. 驗證服務 (AuthService)](#toc)
 
 為了方便在 Controller 或 Service 層取得「當前登入的使用者」，我們封裝一個 `AuthService`。
 
@@ -497,7 +519,7 @@ public class AuthService {
 }
 ```
 
-### 6. 全域錯誤處理 (GlobalExceptionHandler)
+### <a id="CH4-2-6"></a>[6. 全域錯誤處理 (GlobalExceptionHandler)](#toc)
 
 為了讓前端能收到統一格式的錯誤訊息，並正確處理 401/403 等狀態碼，我們使用 Spring 的 `@ControllerAdvice` 來集中處理異常。
 
@@ -589,14 +611,14 @@ public class GlobalExceptionHandler {
 
 ---
 
-## <a id="CH4-3"></a>[4-3 後端簡化配置](#toc)
+## <a id="CH4-3"></a>[4-3 後端簡化配置 (Simplified Configuration)](#toc)
 
 為了降低學習門檻，在這提供一套「簡化版」的 Security 配置。
 
 它的核心精神是：**「雖然有做登入檢查，但預設不擋任何權限 (Permit All)」**。
 只要 Token 合法，我們就將使用者資訊放入 Context；若 Token 無效或沒帶，也不會特別阻擋請求，讓後續的 Controller 決定如何處理。
 
-### 1. 引入依賴 (Maven)
+### <a id="CH4-3-1"></a>[1. 引入依賴 (Maven)](#toc)
 
 與標準版相同，確保 `pom.xml` 有以下依賴：
 
@@ -629,7 +651,7 @@ public class GlobalExceptionHandler {
 </dependency>
 ```
 
-### 2. JWT 工具類 (JwtUtil)
+### <a id="CH4-3-2"></a>[2. JWT 工具類 (JwtUtil)](#toc)
 
 負責簽發 (Generate) 與 解析 (Parse) Token。
 
@@ -692,7 +714,7 @@ public class JwtUtil {
 }
 ```
 
-### 3. 攔截器 (簡化版 JwtAuthenticationFilter)
+### <a id="CH4-3-3"></a>[3. 攔截器 (簡化版 JwtAuthenticationFilter)](#toc)
 
 在這個簡化版本中，我們**移除了錯誤處理 (Try-Catch) 與權限轉換 (Role)** 的邏輯，讓程式碼更乾淨易懂。
 若是 Token 格式錯誤或過期，`jwtUtil` 會直接拋出例外 (導致 HTTP 500)。
@@ -751,7 +773,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 }
 ```
 
-### 4. 驗證服務 (AuthService)
+### <a id="CH4-3-4"></a>[4. 驗證服務 (AuthService)](#toc)
 
 為了方便在 Controller 或 Service 層取得「當前登入的使用者」，我們封裝一個 `AuthService`。
 
@@ -775,7 +797,7 @@ public class AuthService {
 }
 ```
 
-### 5. 簡化版設定檔 (SecurityConfig)
+### <a id="CH4-3-5"></a>[5. 簡化版設定檔 (SecurityConfig)](#toc)
 
 這是與標準版最大的差異。我們將 `authorizeHttpRequests` 全部設為 `permitAll()`，意思是不管有沒有 Token，路徑都會放行。
 但我們還是保留了 `JwtAuthenticationFilter`，確保如果使用者有帶 Token，我們依然能解析出身分並放入 Context，供後續程式使用。
@@ -901,4 +923,17 @@ api.interceptors.response.use(
 5.  後端 Filter 攔截檢查 JWT，合法才放行。
 6.  若 JWT 過期，後端回傳 401，前端自動導回登入頁。
 
-下一章，我們要把這一切「元件化」，用 Vue.js 來優化我們的開發體驗。
+## <a id="CH4-5"></a>[4-5 結語：Web 開發的完整拼圖](#toc)
+
+**REST API -> Ajax -> IO -> Security**
+
+恭喜你！這就是現代 Web 開發的完整拼圖。
+這門課帶你走過了從後端 API 設計，到前端 Ajax 串接，再到安全性與 Token 機制的實作。
+
+雖然技術是不斷更新的（比如前端有 Vue, React, Angular），但這幾章學到的 **HTTP 標準、Token 機制、IO 串流原理**，是這十年來都沒有變過的 Web 基礎。掌握了這些底層觀念，未來的路，你可以走得更穩、更遠。
+
+Happy Coding! 🚀
+
+---
+
+> **備註**：如果你對現代前端框架感興趣，可以以此為基礎，繼續閱讀本教學的附錄章節：**前端架構優化與 Vue.js 導論**。

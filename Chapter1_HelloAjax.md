@@ -3,8 +3,20 @@
 ## <a id="toc"></a>目錄
 
 - [1-1 為什麼我們需要 Ajax？](#CH1-1)
+  - [傳統 Spring MVC 的痛點](#CH1-1-1)
+  - [Ajax 的前世今生](#CH1-1-2)
 - [1-2 後端的轉變：Spring Web MVC 核心解析](#CH1-2)
+  - [1. 認識 JSON (JavaScript Object Notation)](#CH1-2-1)
+  - [2. 深入 Spring MVC 核心：請求是怎麼跑的？](#CH1-2-2)
+  - [3. 幕後功臣：Jackson](#CH1-2-3)
+  - [4. 關鍵註解總整理](#CH1-2-4)
+  - [實戰：第一個 JSON API](#CH1-2-5)
 - [1-3 前端的接招：初探 fetch](#CH1-3)
+  - [Fetch 的兩階段處理機制](#CH1-3-1)
+  - [基本語法範例](#CH1-3-2)
+  - [常見誤區：Fetch 的錯誤判斷](#CH1-3-3)
+  - [觀察 HTTP 封包 (必學技能)](#CH1-3-4)
+  - [練習](#CH1-3-5)
 
 ---
 
@@ -22,7 +34,7 @@ Ajax 就是讓網頁能「偷偷跟伺服器要資料」的技術。從今天開
 
 ## <a id="CH1-1"></a>[1-1 為什麼我們需要 Ajax？](#toc)
 
-### 傳統 Spring MVC 的痛點
+### <a id="CH1-1-1"></a>[傳統 Spring MVC 的痛點](#toc)
 
 還記得我們在寫 Spring MVC 時的標準起手式嗎？
 
@@ -45,7 +57,7 @@ Ajax 就是讓網頁能「偷偷跟伺服器要資料」的技術。從今天開
 > - **非同步 (Asynchronous)**：
 >   發出請求後不需等待，可以繼續執行後續動作。當回應到達時，再處理回傳的資料。就像**傳 LINE 訊息**，訊息傳出後你可以繼續做其他事，等對方回覆了再去讀取即可。
 
-### Ajax 的前世今生
+### <a id="CH1-1-2"></a>[Ajax 的前世今生](#toc)
 
 **Ajax** 這個詞全名為 **Asynchronous JavaScript and XML（非同步的 JS 和 XML 技術）**，最早由使用者體驗設計師 [Jesse James Garrett](https://zh.wikipedia.org/wiki/%E5%82%91%E8%A5%BF%C2%B7%E8%A9%B9%E5%A7%86%E5%A3%AB%C2%B7%E8%B3%88%E7%91%9E%E7%89%B9) 在 2005 年的一篇文章[《Ajax: A New Approach to Web Applications ( Ajax: 網頁應用程式的新方法 )》](https://web.archive.org/web/20061107032631/http://www.adaptivepath.com/publications/essays/archives/000385.php)中提出。但其實相關技術早在這之前就存在於瀏覽器中了（例如 Microsoft 的 Outlook Web Access）。
 
@@ -117,7 +129,7 @@ Ajax 並不是一個單一的全新技術，而是整合了瀏覽器既有的功
 
 要開始寫 Ajax，後端的思維必須做最大的翻轉。我們不再回傳 `String` (View Name)，而是要回傳 **資料**。而在 Web 的世界裡，這個「資料」最通用的格式就是 **JSON**。
 
-### 1. 認識 JSON (JavaScript Object Notation)
+### <a id="CH1-2-1"></a>[1. 認識 JSON (JavaScript Object Notation)](#toc)
 
 JSON 是一種輕量級的資料交換的「文字」格式，易於人閱讀和編寫，同時也易於機器解析和生成。它最初是源自於 JavaScript 的一個子集，但現在已經是獨立於語言的格式，幾乎所有程式語言都有支援 JSON 的解析器。  
 Java 原生不支援 JSON 解析，但有許多第三方 Library 可以使用，常見如 **Jackson**、**Gson**，Spring Boot 預設使用 **Jackson**。
@@ -149,7 +161,7 @@ Java 原生不支援 JSON 解析，但有許多第三方 Library 可以使用，
   }
   ```
 
-### 2. 深入 Spring MVC 核心：請求是怎麼跑的？
+### <a id="CH1-2-2"></a>[2. 深入 Spring MVC 核心：請求是怎麼跑的？](#toc)
 
 當一個 HTTP 請求進入 Spring Boot 應用程式時，會經過以下流程：
 
@@ -170,7 +182,7 @@ Java 原生不支援 JSON 解析，但有許多第三方 Library 可以使用，
 
 這時，**HttpMessageConverter** 就會介入，預設由 **Jackson** 函式庫接手工作。
 
-### 3. 幕後功臣：Jackson
+### <a id="CH1-2-3"></a>[3. 幕後功臣：Jackson](#toc)
 
 **Jackson** 是 Java 生態系中最流行的 JSON 處理函式庫。在 Spring Boot 中，你不需要額外設定，它已經內建好了。它的核心組件是 `ObjectMapper`。
 
@@ -181,7 +193,7 @@ Java 原生不支援 JSON 解析，但有許多第三方 Library 可以使用，
 3.  將欄位名稱轉為 JSON Key，欄位值轉為 JSON Value。
 4.  產出最終的 JSON 字串並回傳給瀏覽器。
 
-### 4. 關鍵註解總整理
+### <a id="CH1-2-4"></a>[4. 關鍵註解總整理](#toc)
 
 | 註解                  | 說明                                                                                                                                                    |
 | :-------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -189,7 +201,7 @@ Java 原生不支援 JSON 解析，但有許多第三方 Library 可以使用，
 | **`@ResponseBody`**   | 告訴 Spring：「不要解析視圖！直接把回傳值轉成資料 (JSON/Text) 丟回給瀏覽器」。通常加在方法上。                                                          |
 | **`@RestController`** | 這是一個組合註解，等同於 **`@Controller` + `@ResponseBody`**。使用了它，整個類別內的所有方法預設都會回傳資料 (JSON)，不用每個方法都加 `@ResponseBody`。 |
 
-### 實戰：第一個 JSON API
+### <a id="CH1-2-5"></a>[實戰：第一個 JSON API](#toc)
 
 讓我們來寫一個簡單的 API，回傳使用者資訊。
 
@@ -253,7 +265,7 @@ public class UserController {
 > xhr.send();
 > ```
 
-### Fetch 的兩階段處理機制
+### <a id="CH1-3-1"></a>[Fetch 的兩階段處理機制](#toc)
 
 Fetch API 最大的特色是它透過 **Promise** 來處理非同步流程，而且讀取資料是分「兩階段」進行的：
 
@@ -262,7 +274,7 @@ Fetch API 最大的特色是它透過 **Promise** 來處理非同步流程，而
 2.  **第二階段：讀取資料本體 (Response Body)**
     我們必須依照資料格式（如 JSON、Text、Blob），呼叫對應的方法來把資料讀出來。
 
-### 基本語法範例
+### <a id="CH1-3-2"></a>[基本語法範例](#toc)
 
 我們來嘗試呼叫剛剛寫好的 `/ch1_2/users` API。
 
@@ -313,7 +325,7 @@ fetch("/ch1_2/users")
   });
 ```
 
-### 常見誤區：Fetch 的錯誤判斷
+### <a id="CH1-3-3"></a>[常見誤區：Fetch 的錯誤判斷](#toc)
 
 新手最容易踩的坑是：**「伺服器回傳 404 或 500 時，Fetch 不會報錯！」**
 
@@ -334,7 +346,7 @@ fetch("/wrong-url")
   .catch((err) => console.log("抓到了!", err)); // 會印出來！
 ```
 
-### 觀察 HTTP 封包 (必學技能)
+### <a id="CH1-3-4"></a>[觀察 HTTP 封包 (必學技能)](#toc)
 
 寫 Ajax 不會看 Network Tab，就像蒙眼開車一樣危險。請打開 Chrome 開發者工具 (F12) -> **Network**。
 
@@ -347,7 +359,7 @@ fetch("/wrong-url")
 - **Response**:
   - 這裡就是後端實際傳回來的原始文字，永遠以這裡看到的為準。後端跟你說他傳了，但這裡沒顯示，那就是沒傳。
 
-### 練習
+### <a id="CH1-3-5"></a>[練習](#toc)
 
 1. 啟動後端專案。
 2. 開啟瀏覽器，按 F12 打開 Console。

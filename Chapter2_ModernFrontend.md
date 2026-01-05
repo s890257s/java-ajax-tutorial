@@ -3,8 +3,22 @@
 ## <a id="toc"></a>目錄
 
 - [2-1 JavaScript ES6+ 必備語法速成](#CH2-1)
+  - [1. 變數宣告：const vs let](#CH2-1-1)
+  - [2. 箭頭函式 (Arrow Functions)](#CH2-1-2)
+  - [3. Template 模板字串 (Template Literals)](#CH2-1-3)
+  - [4. 解構賦值 (Destructuring Assignment)](#CH2-1-4)
+  - [5. 展開運算子 (Spread Operator)](#CH2-1-5)
+  - [6. 常用陣列方法](#CH2-1-6)
+  - [7. 模組化 (Modules)](#CH2-1-7)
 - [2-2 非同步處理 (Asynchronous)](#CH2-2)
+  - [1. 概念 (Concept)](#CH2-2-1)
+  - [2. 回呼地獄 (Callback Hell)](#CH2-2-2)
+  - [3. Promise](#CH2-2-3)
+  - [4. Async / Await](#CH2-2-4)
 - [2-3 HTTP Client 的選擇：XHR vs Fetch vs Axios](#CH2-3)
+  - [選手 1: XMLHttpRequest (XHR)](#CH2-3-1)
+  - [選手 2: Fetch API](#CH2-3-2)
+  - [選手 3: Axios](#CH2-3-3)
 
 ---
 
@@ -25,7 +39,7 @@
 
 ## <a id="CH2-1"></a>[2-1 JavaScript ES6+ 必備語法速成](#toc)
 
-### 1. 變數宣告：`const` vs `let`
+### <a id="CH2-1-1"></a>[1. 變數宣告：`const` vs `let`](#toc)
 
 ES6 以前我們使用 `var`，但它有奇怪的作用域問題、容易產生各種 BUG，現在請直接無視它。
 現代開發請遵守這條黃金法則：**「能用 `const` 就用 `const`，真的要改變才用 `let`」**。
@@ -90,7 +104,7 @@ count++; // ✅ OK!
 >
 >     const 在這裡就是在幫你「用語言層面提醒自己」：別偷偷修改原資料
 
-### 2. 箭頭函式 (Arrow Functions)
+### <a id="CH2-1-2"></a>[2. 箭頭函式 (Arrow Functions)](#toc)
 
 Java 的 Lambda 是學 JS 的。這不只是語法糖，還解決了 `this` 指向混亂的問題。
 
@@ -144,7 +158,7 @@ fetch(url).then((response) => response.json());
 > };
 > ```
 
-### 3. Template 模板字串 (Template Literals)
+### <a id="CH2-1-3"></a>[3. Template 模板字串 (Template Literals)](#toc)
 
 別再用 `+` 號拼湊 HTML 字串了，既不美觀又容易出錯。
 
@@ -172,7 +186,7 @@ const html = `
 `;
 ```
 
-### 4. 解構賦值 (Destructuring Assignment)
+### <a id="CH2-1-4"></a>[4. 解構賦值 (Destructuring Assignment)](#toc)
 
 從物件或陣列中快速提取資料。這在處理 Ajax 回傳的 JSON 時超級好用。
 
@@ -199,7 +213,7 @@ const {
 console.log(city); // Taipei
 ```
 
-### 5. 展開運算子 (Spread Operator)
+### <a id="CH2-1-5"></a>[5. 展開運算子 (Spread Operator)](#toc)
 
 使用 `...` 符號，可以快速展開陣列或物件，常用於複製或合併資料。
 
@@ -227,7 +241,7 @@ deepCopiedUser.address.city = "台中市";
 console.log(user.address.city); // 台北市 (不受影響)
 ```
 
-### 6. 常用陣列方法
+### <a id="CH2-1-6"></a>[6. 常用陣列方法](#toc)
 
 現代 JS 處理資料流的核心，告別傳統 `for` 迴圈。這些方法大部分**不會改變原陣列**，而是回傳新結果。
 
@@ -287,7 +301,7 @@ console.log(user.address.city); // 台北市 (不受影響)
   nums.every((n) => n > 0); // true
   ```
 
-### 7. 模組化 (Modules)
+### <a id="CH2-1-7"></a>[7. 模組化 (Modules)](#toc)
 
 將程式拆分成小檔案，易於維護與重用。使用 `export` 匯出，`import` 匯入。
 (注意：在瀏覽器直接使用需要宣告 `<script type="module">`，通常會搭配 Webpack/Vite 等工具打包)
@@ -329,7 +343,7 @@ import currentUser from "./user.js";
 
 ## <a id="CH2-2"></a>[2-2 非同步處理 (Asynchronous)](#toc)
 
-### 1. 概念 (Concept)
+### <a id="CH2-2-1"></a>[1. 概念 (Concept)](#toc)
 
 JavaScript 是**單執行緒 (Single Threaded)** 的語言，這意味著它一次只能做一件事。
 如果執行一個耗時操作（例如：跟伺服器要資料需要 3 秒），主程式就會被卡住 (Blocking)，導致畫面凍結，使用者體驗極差。
@@ -349,7 +363,7 @@ JavaScript 是**單執行緒 (Single Threaded)** 的語言，這意味著它一�
 >
 > 模擬行為可參考 https://www.jsv9000.app/
 
-### 2. 回呼地獄 (Callback Hell)，以下為演示程式碼，此寫法已被淘汰
+### <a id="CH2-2-2"></a>[2. 回呼地獄 (Callback Hell)，以下為演示程式碼，此寫法已被淘汰](#toc)
 
 非同步任務（如 `fetch`、`setTimeout`）雖然會依照程式碼順序**逐行啟動**，但啟動後會交由瀏覽器在背景處理，**完成時間不固定**  
 以下寫法**無法保證執行結果的順序**，若有資料依賴關係，將會導致嚴重的邏輯錯誤。
@@ -450,7 +464,7 @@ asyncProcess(
 </div>
 <p align="center"><i>Callback Hell 又被戲稱為波動拳 (Hadouken)</i></p>
 
-### 3. Promise
+### <a id="CH2-2-3"></a>[3. Promise](#toc)
 
 ES6 引入了 Promise (承諾)，這是現代非同步開發的基石。簡單來說，它將非同步操作標準化為一個物件，讓你用更優雅的方式處理「未來才會發生」的事件。
 
@@ -531,7 +545,7 @@ asyncProcess("1. 取得使用者...")
 
 這樣是不是清爽多了？而且只要一個 `.catch()` 就能捕獲整條鏈上的錯誤！
 
-### 4. Async / Await
+### <a id="CH2-2-4"></a>[4. Async / Await](#toc)
 
 ES8 (2017) 推出的 `async` / `await` 是 Promise 的語法糖，也是目前**最主流、最推薦**的寫法。
 它讓非同步程式碼讀起來跟「同步程式碼」幾乎一樣，不僅直觀，還能直接使用 `try-catch` 進行錯誤處理。
@@ -615,7 +629,7 @@ startFlow();
 掌握了 Async/Await 非同步處理的概念後，接下來我們要實際與後端伺服器進行溝通。
 在前端開發中，主要有三種發送 HTTP 請求的方式，讓我們來看看它們的演進與特性。
 
-### 選手 1: XMLHttpRequest (XHR)
+### <a id="CH2-3-1"></a>[選手 1: XMLHttpRequest (XHR)](#toc)
 
 這是早期的 AJAX 實作方式，現在已經鮮少直接使用。
 
@@ -646,7 +660,7 @@ xhr.onreadystatechange = function () {
 xhr.send();
 ```
 
-### 選手 2: Fetch API
+### <a id="CH2-3-2"></a>[選手 2: Fetch API](#toc)
 
 隨著 ES6 推出的現代瀏覽器內建標準。
 
@@ -671,7 +685,7 @@ fetch("http://localhost:8080/ch2_3/api/todo/1")
   .catch((error) => console.error("發生錯誤:", error));
 ```
 
-### 選手 3: Axios
+### <a id="CH2-3-3"></a>[選手 3: Axios](#toc)
 
 目前業界最廣泛使用的第三方 HTTP Client 函式庫。
 

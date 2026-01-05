@@ -1,10 +1,16 @@
-# 章節 5 ｜ 前端架構優化與 Vue.js 導論 (Architecture & Vue)
+# 備註 ｜ 前端架構優化與 Vue.js 導論 (Architecture & Vue)
 
 ## <a id="toc"></a>目錄
 
 - [5-1 為什麼我們需要 Vue.js？](#CH5-1)
+  - [Vanilla JS (原生 JS) 的極限](#CH5-1-1)
+  - [Vue.js 的思維](#CH5-1-2)
 - [5-2 Vue.js 快速上手 (CDN 模式)](#CH5-2)
+  - [Hello Vue](#CH5-2-1)
+  - [核心指令重點](#CH5-2-2)
 - [5-3 實戰整合：用 Vue 實作登入與檔案上傳](#CH5-3)
+  - [1. 登入元件 (Login)](#CH5-3-1)
+  - [2. 檔案上傳元件 (File Upload)](#CH5-3-2)
 
 ---
 
@@ -15,13 +21,13 @@
 
 「只是想改個變數，為什麼要手動去抓 DOM 元素更新？」
 
-這就是現代前端框架 (Vue, React) 誕生的原因。這章我們不談複雜的 Webpack/Vite 打包，直接用最簡單的 **CDN 模式**，讓你體驗「資料驅動」的魔力，並把上一章學到的技術「元件化」。
+這就是現代前端框架 (Vue, React) 誕生的原因。這章作為一個**額外的補充備註**，我們不談複雜的 Webpack/Vite 打包，直接用最簡單的 **CDN 模式**，讓你體驗「資料驅動」的魔力，並嘗試把上一章學到的技術「元件化」。
 
 ---
 
 ## <a id="CH5-1"></a>[5-1 為什麼我們需要 Vue.js？](#toc)
 
-### Vanilla JS (原生 JS) 的極限
+### <a id="CH5-1-1"></a>[Vanilla JS (原生 JS) 的極限](#toc)
 
 試想一個簡單的「計數器」功能：
 
@@ -38,7 +44,7 @@ btn.addEventListener("click", () => {
 
 這叫做 **命令式程式設計 (Imperative)**：你必須一步步告訴瀏覽器「怎麼做」。當網頁越來越大，維護這些 DOM 操作會變成惡夢。
 
-### Vue.js 的思維
+### <a id="CH5-1-2"></a>[Vue.js 的思維](#toc)
 
 Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driven)**。
 你只要把變數 (`count`) 改掉，Vue 會自動幫你把所有用到 `count` 的畫面更新。你完全不需要寫 `document.getElementById`。
@@ -49,7 +55,7 @@ Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driv
 
 我們不用安裝 Node.js，直接在 HTML 引入 Vue。
 
-### Hello Vue
+### <a id="CH5-2-1"></a>[Hello Vue](#toc)
 
 ```html
 <!DOCTYPE html>
@@ -120,7 +126,7 @@ Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driv
 </html>
 ```
 
-### 核心指令重點
+### <a id="CH5-2-2"></a>[核心指令重點](#toc)
 
 1.  **`{{ }}` (插值)**：把變數顯示在畫面上。
 2.  **`v-model` (雙向綁定)**：用於 `<input>`，你打字變數就變，變數變框框內容就變。
@@ -134,7 +140,7 @@ Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driv
 
 現在我們用 Vue 來重構上一章的兩個功能：登入 (JWT) 與 檔案上傳。你會發現程式碼變得多乾淨。
 
-### 1. 登入元件 (Login)
+### <a id="CH5-3-1"></a>[1. 登入元件 (Login)](#toc)
 
 利用 `v-model` 自動抓取輸入框的值，再透過 axios 送出。
 
@@ -187,7 +193,7 @@ Vue 提倡 **宣告式程式設計 (Declarative)** 與 **資料驅動 (Data-Driv
 </script>
 ```
 
-### 2. 檔案上傳元件 (File Upload)
+### <a id="CH5-3-2"></a>[2. 檔案上傳元件 (File Upload)](#toc)
 
 Vue 處理檔案比較特別，因為 `<input type="file">` 是唯讀的，不能用 `v-model`。我們需要用 `@change` 事件來抓檔案。
 
@@ -245,15 +251,3 @@ Vue 處理檔案比較特別，因為 `<input type="file">` 是唯讀的，不�
   }).mount("#upload-app");
 </script>
 ```
-
----
-
-### 結語
-
-**REST API -> Ajax -> IO -> Security -> Vue.js**
-
-恭喜你！這就是現代 Web 開發的完整拼圖。
-這門課帶你走過了從後端 API 設計，到前端 Ajax 串接，再到安全性與框架應用的全過程。雖然技術是不斷更新的（比如現在有 React, Angular, Svelte），但這兩章學到的 **HTTP 標準、Token 機制、IO 串流原理**，是這十年來都沒有變過的 web 基礎。
-
-掌握了這些底層觀念，未來的路，你可以走得更穩、更遠。
-Happy Coding! 🚀

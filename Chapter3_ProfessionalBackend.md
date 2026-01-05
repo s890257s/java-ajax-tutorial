@@ -3,9 +3,27 @@
 ## <a id="toc"></a>目錄
 
 - [3-1 什麼是 RESTful API？](#CH3-1)
+  - [1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)](#CH3-1-1)
+  - [2. API 寫法、HTTP 請求與語意](#CH3-1-2)
+  - [3. 結構嵌套 (Nesting)](#CH3-1-3)
+  - [4. 查詢參數設計 (Filtering, Sorting, Pagination)](#CH3-1-4)
+  - [5. 版本控制](#CH3-1-5)
+  - [6. HTTP 狀態碼 (Status Codes)](#CH3-1-6)
+  - [7. RESTful 六大約束](#CH3-1-7)
+  - [8. 其他風格 API 補充](#CH3-1-8)
 - [3-2 資料傳輸物件 (DTO) 深度解析](#CH3-2)
+  - [為什麼不能用 Entity？](#CH3-2-1)
+  - [DTO (Data Transfer Object) 實戰範例](#CH3-2-2)
+  - [手寫 Mapper (Manual Mapping)](#CH3-2-3)
 - [3-3 物件轉換神器：BeanUtils vs MapStruct](#CH3-3)
-- [3-4 接收資料的十八般武藝](#CH3-4)
+  - [1. Spring BeanUtils (簡單但有雷)](#CH3-3-1)
+  - [2. MapStruct (推薦)](#CH3-3-2)
+- [3-4 接收與回應資料的十八般武藝 (Frontend & Backend)](#CH3-4)
+  - [1. JSON 資料 (`application/json`)](#CH3-4-1)
+  - [2. URL 參數 (`Path Variables` & `Query Parameters`)](#CH3-4-2)
+  - [3. 表單資料 (`application/x-www-form-urlencoded`)](#CH3-4-3)
+  - [4. 檔案上傳 (`multipart/form-data`)](#CH3-4-4)
+  - [5. 檔案下載 (`Blob`)](#CH3-4-5)
 
 ---
 
@@ -100,7 +118,7 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
 
 ---
 
-### 1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)
+### <a id="CH3-1-1"></a>[1. 基本介紹：資源 (Resources) 與 動詞 (Verbs)](#toc)
 
 在 RESTful 的設計理念中，我們將網路上的事物抽象為 **資源 (Resource)**。而設計 API 時的核心原則就是：「**URL 是名詞，HTTP Method 是動詞**」。
 
@@ -153,7 +171,7 @@ REST 全名 **Representational State Transfer** (表現層狀態轉移)。這三
 
 ---
 
-### 2. API 寫法、HTTP 請求與語意
+### <a id="CH3-1-2"></a>[2. API 寫法、HTTP 請求與語意](#toc)
 
 RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)：
 
@@ -228,7 +246,7 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 
 ---
 
-### 3. 結構嵌套 (Nesting)
+### <a id="CH3-1-3"></a>[3. 結構嵌套 (Nesting)](#toc)
 
 RESTful 的 URL **不是在描述動作，而是在描述「資源之間的關係」**。所謂結構嵌套 (Nested Resources)，就是**把子資源掛在父資源之下，用 URL 階層表達「從屬關係」**。
 
@@ -309,7 +327,7 @@ RESTful 的 URL **不是在描述動作，而是在描述「資源之間的關�
 
 ---
 
-### 4. 查詢參數設計 (Filtering, Sorting, Pagination)
+### <a id="CH3-1-4"></a>[4. 查詢參數設計 (Filtering, Sorting, Pagination)](#toc)
 
 在 RESTful API 中，**查詢條件通常放在 URL 的 Query String**，用來描述「**我要找哪些資源、用什麼條件找**」。
 
@@ -387,7 +405,7 @@ GET /api/orders?status=PAID&from=2025-01-01&sort=createdAt&order=desc&page=0&siz
 
 ---
 
-### 5. 版本控制
+### <a id="CH3-1-5"></a>[5. 版本控制](#toc)
 
 API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 APP 會壞掉。當有「破壞性更新」時，必須升級版本。
 常見做法有兩種：
@@ -400,7 +418,7 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 
 ---
 
-### 6. HTTP 狀態碼 (Status Codes)
+### <a id="CH3-1-6"></a>[6. HTTP 狀態碼 (Status Codes)](#toc)
 
 正確使用狀態碼是後端工程師的基本素養。將狀態碼表格化整理如下：
 
@@ -507,7 +525,7 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 >
 > **一句話總結：** 正向代理隱藏「真正的客戶端」，反向代理隱藏「真正的伺服器」。
 
-### 7. RESTful 六大約束
+### <a id="CH3-1-7"></a>[7. RESTful 六大約束](#toc)
 
 要稱為 RESTful，必須符合以下原則：
 
@@ -521,7 +539,7 @@ API 一旦發布給別人用，就不能隨便改，否則依賴你的前端或 
 > **💡 提醒：**
 > RESTful 是一種架構風格，**並非強制性的硬性標準**。在實務開發中，它僅作為設計建議，不需要完全死板地遵循，應以業務需求與團隊開發效率為首要考量。
 
-### 8. 其他風格 API 補充
+### <a id="CH3-1-8"></a>[8. 其他風格 API 補充](#toc)
 
 REST 雖然是主流，但不是唯一：
 
@@ -555,11 +573,11 @@ REST 雖然是主流，但不是唯一：
 
 ---
 
-## <a id="CH3-2"></a>[3-2 資料傳輸物件 (DTO) 解析](#toc)
+## <a id="CH3-2"></a>[3-2 資料傳輸物件 (DTO) 深度解析](#toc)
 
 初學者最愛犯的錯誤：**直接把 Entity (資料庫物件) 回傳給前端**。
 
-### 為什麼不能用 Entity？
+### <a id="CH3-2-1"></a>[為什麼不能用 Entity？](#toc)
 
 1.  **安全性 (Security)**：
     你的 `User` Entity 可能包含 `password`、`salt` 等敏感欄位。若直接回傳 Entity，Jackson 會把所有欄位轉成 JSON，導致密碼或個資外洩。
@@ -584,7 +602,7 @@ REST 雖然是主流，但不是唯一：
 3.  **耦合度 (Coupling)**：
     前端過度依賴資料庫結構。如果你配合業務需求修改了 Table 欄位名稱 (例如 `phone` 改成 `mobile`)，前端程式碼就會壞掉。使用 DTO 可以作為中間緩衝層，保持 API 介面不變。
 
-### DTO (Data Transfer Object) 實戰範例
+### <a id="CH3-2-2"></a>[DTO (Data Transfer Object) 實戰範例](#toc)
 
 DTO 是一個純粹的 POJO (Plain Old Java Object)，裡面沒有商業邏輯，只有欄位。它的存在只有一個目的：**定義前後端的資料契約**。
 
@@ -630,7 +648,7 @@ public class UserResponse {
 
 ---
 
-### 手寫 Mapper (Manual Mapping)
+### <a id="CH3-2-3"></a>[手寫 Mapper (Manual Mapping)](#toc)
 
 在介紹自動化工具之前，我們先看看最原始的「手寫轉換」。這是理解所有 Mapping 工具的基礎。
 
@@ -694,7 +712,7 @@ public class userService {
 有了 DTO，我們就會面臨一個痛苦的問題：**怎麼把 Entity 轉成 DTO？**
 手寫 `dto.setName(entity.getName())` 就像上面示範的那樣，寫十個欄位還行，寫一百個會瘋掉。
 
-### 1. Spring BeanUtils (簡單但有雷)
+### <a id="CH3-3-1"></a>[1. Spring BeanUtils (簡單但有雷)](#toc)
 
 Spring 自帶的工具。
 
@@ -711,7 +729,7 @@ BeanUtils.copyProperties(userEntity, userDto);
   - **除錯困難**：欄位填錯名字不會報錯，只會變成 null。
   - **深拷貝問題**：對於 List 或巢狀物件處理很弱。
 
-### 2. MapStruct (推薦)
+### <a id="CH3-3-2"></a>[2. MapStruct (推薦)](#toc)
 
 MapStruct 是一個 **Annotation Processor**，是目前業界最推薦的 Java Bean Mapping 工具。它與 BeanUtils 最大的區別在於：
 
@@ -883,7 +901,7 @@ public abstract class UserMapper {
 
 後端 Controller 要怎麼接前端丟過來的東西？這取決於 HTTP Header 中的 `Content-Type`。我們來看看常見的五種情境，並附上 **Frontend (Axios)** 與 **Backend (Spring Boot)** 的對照寫法。
 
-### 1. JSON 資料 (`application/json`)
+### <a id="CH3-4-1"></a>[1. JSON 資料 (`application/json`)](#toc)
 
 這是現代 Ajax 最標準的傳輸方式。
 
@@ -914,7 +932,7 @@ public ResponseEntity<Product> create(@RequestBody ProductDto dto) {
 
 ---
 
-### 2. URL 參數 (`Path Variables` & `Query Parameters`)
+### <a id="CH3-4-2"></a>[2. URL 參數 (`Path Variables` & `Query Parameters`)](#toc)
 
 這通常用於 `GET` 請求，或是刪除/修改特定 ID 的資源。
 
@@ -977,7 +995,7 @@ public List<OrderDto> getOrders(@ModelAttribute OrderSearchQuery query) {
 
 ---
 
-### 3. 表單資料 (`application/x-www-form-urlencoded`)
+### <a id="CH3-4-3"></a>[3. 表單資料 (`application/x-www-form-urlencoded`)](#toc)
 
 這主要有兩種場景：
 
@@ -1013,7 +1031,7 @@ public String login(
 
 ---
 
-### 4. 檔案上傳 (`multipart/form-data`)
+### <a id="CH3-4-4"></a>[4. 檔案上傳 (`multipart/form-data`)](#toc)
 
 這也是 Ajax 中較為特殊的情境，必須使用 `FormData` 物件。
 
@@ -1064,7 +1082,7 @@ public String upload(
 
 ---
 
-### 5. 檔案下載 (`Blob`)
+### <a id="CH3-4-5"></a>[5. 檔案下載 (`Blob`)](#toc)
 
 下載的痛點在於：如果後端回傳二進位流，而你用一般的方式接，會變成一堆亂碼字串。因為 Ajax 預設是處理文字的。
 
@@ -1132,4 +1150,4 @@ public ResponseEntity<Resource> download(@PathVariable String filename) throws M
 | **File Upload**   | `multipart/form-data`      | `new FormData()`         | `@RequestParam("f") MultipartFile f` |
 | **File Download** | `application/octet-stream` | `responseType: 'blob'`   | `ResponseEntity<Resource>`           |
 
-下一章，我們將進入全端開發的深水區：**Web 安全性與 Vue.js 整合**。
+下一章，我們將進入全端開發的深水區：**全端安全性架構 (Full Stack Security)**。
