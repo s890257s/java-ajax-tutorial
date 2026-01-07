@@ -239,6 +239,7 @@ Vue 處理檔案比較特別，因為 `<input type="file">` 是唯讀的，不�
 
         try {
           // 記得上一章教的攔截器嗎？這裡不用手動帶 Token，axios 攔截器會幫忙做！
+          // (備註：本範例需搭配 Chapter 4 的 apiClient 設定，或需自行在全域設定 axios interceptors 才會生效)
           await axios.post("/api/upload", formData);
           alert("上傳成功！");
         } catch (err) {

@@ -823,7 +823,7 @@ public class SecurityConfig {
 
         return http
             // 1. 開啟 CORS (前端 5500 -> 後端 8080，不同 Port 視為跨域)
-            .cors(cros -> cros.configurationSource(request -> corsConfiguration))
+            .cors(cors -> cors.configurationSource(request -> corsConfiguration))
             // 2. 關閉 CSRF (因為是無狀態 API)
             .csrf(csrf -> csrf.disable())
             // 3. 關閉 Session (改用 JWT)

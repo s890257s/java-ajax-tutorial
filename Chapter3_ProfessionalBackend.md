@@ -224,7 +224,7 @@ RESTful 風格強調使用 **HTTP Method (動詞)** 來表達你的意圖 (CRUD)
 > - ❌ **非冪等 (`POST /users`)**：每次請求都會「新增」一筆全新的資料 (Id 1, Id 2, ...)，改變了伺服器的狀態。
 >
 > **4. 為什麼 PATCH 不是冪等？**
-> 雖然只是改欄位，看起來很像冪等，但 HTTP 協定允許 PATCH 包含「操作指令」而不僅是數據。
+> 雖然只是改欄位，看起來很像冪等，但 HTTP 協定允許 PATCH 包含「操作指令」而不僅是資料。
 >
 > - **場景 A (像冪等)**：`{ "email": "new@example.com" }` -> 重試 N 次結果都一樣 (Email 都是新的)。
 > - **場景 B (非冪等)**：`{ "operation": "add", "value": 100 }` (如增加餘額) -> 重試 N 次會導致餘額重複增加。
@@ -1049,12 +1049,7 @@ const formData = new FormData();
 formData.append("file", file);
 formData.append("description", "My Avatar");
 
-axios.post("/api/upload", formData, {
-  headers: {
-    "Content-Type": "multipart/form-data",
-    // 其實 axios 偵測到 FormData 會自動加這個 header 並附上 boundary，但明確寫出來是好習慣。
-  },
-});
+axios.post("/api/upload", formData);
 ```
 
 #### Backend (Spring Boot)
